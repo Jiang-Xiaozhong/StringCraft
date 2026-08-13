@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 mod hotkey;
+mod transform;
 mod tray;
 
 use tauri::{AppHandle, Manager};

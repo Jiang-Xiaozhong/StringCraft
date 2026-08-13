@@ -11,7 +11,7 @@ pub fn default_hotkey() -> &'static str {
 }
 
 pub fn register_default(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    app.plugin(
+    Ok(app.plugin(
         Builder::new()
             .with_shortcuts([default_hotkey()])?
             .with_handler(|app, _shortcut, event| {
@@ -20,5 +20,5 @@ pub fn register_default(app: &AppHandle) -> Result<(), Box<dyn std::error::Error
                 }
             })
             .build(),
-    )
+    )?)
 }

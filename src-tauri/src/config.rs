@@ -61,8 +61,16 @@ pub fn default_buttons() -> Vec<TransformButton> {
         button("camel-to-underscore", "驼峰→下划线", "camel-to-underscore"),
         button("camel-to-space", "驼峰→空格", "camel-to-space"),
         button("space-to-hyphen", "空格→中横线", "space-to-hyphen"),
-        button("underscore-to-hyphen", "下划线→中横线", "underscore-to-hyphen"),
-        button("hyphen-to-underscore", "中横线→下划线", "hyphen-to-underscore"),
+        button(
+            "underscore-to-hyphen",
+            "下划线→中横线",
+            "underscore-to-hyphen",
+        ),
+        button(
+            "hyphen-to-underscore",
+            "中横线→下划线",
+            "hyphen-to-underscore",
+        ),
         button("underscore-to-space", "下划线→空格", "underscore-to-space"),
         button("underscore-to-dot", "下划线→小数点", "underscore-to-dot"),
         button("dot-to-underscore", "小数点→下划线", "dot-to-underscore"),

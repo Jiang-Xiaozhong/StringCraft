@@ -10,7 +10,7 @@
 - 核心插件：tauri-plugin-global-shortcut / single-instance / autostart / clipboard-manager / store；arboard；enigo
 - 需求文档：[docs/需求方案.md](docs/需求方案.md)（v0.3 已定稿）
 - 开发阶段：M1~M6，见需求文档第 7 节
-- 远程仓库：https://gitee.com/john-kramer/StringCraft.git（主分支 master）
+- 远程仓库：https://github.com/Jiang-Xiaozhong/StringCraft.git（主分支 master）
 - 语言约定：文档、开发日志、代码注释、commit 说明用中文；代码标识符用英文
 
 ## 多机协作总原则（最高优先级）
@@ -56,4 +56,3 @@
 - 不提交：构建产物（`target/`、`node_modules/`、`dist/`、`src-tauri/target/`）、安装包（`*.msi`、`*.exe`、`*.dmg` 等）、密钥与凭证、环境文件。
 - 本地 IDE 的个人状态文件（如 `.idea/workspace.xml`）不提交；已在仓库中的共享配置保持现状。
 - 需求变更必须先更新 [docs/需求方案.md](docs/需求方案.md)（版本号、日期、变更记录），再动代码。
-

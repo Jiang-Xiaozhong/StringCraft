@@ -1,0 +1,59 @@
+# StringCraft · Codex 开发规则
+
+本文件随仓库同步，两台电脑上的 Codex 都会自动读取并遵守。任何开发行为不得绕过以下规则。
+
+## 项目概况
+
+- 名称：StringCraft（字符串工坊）
+- 目标：跨平台（Windows 10/11、macOS）轻量级字符串转换工具
+- 技术栈：Tauri 2 + Rust 后端；前端 Svelte + TypeScript + Vite
+- 核心插件：tauri-plugin-global-shortcut / single-instance / autostart / clipboard-manager / store；arboard；enigo
+- 需求文档：[docs/需求方案.md](docs/需求方案.md)（v0.3 已定稿）
+- 开发阶段：M1~M6，见需求文档第 7 节
+- 远程仓库：https://gitee.com/john-kramer/StringCraft.git（主分支 master）
+- 语言约定：文档、开发日志、代码注释、commit 说明用中文；代码标识符用英文
+
+## 多机协作总原则（最高优先级）
+
+开发规则、文档、日志全部放在仓库里随代码同步。两台电脑之间唯一的交接方式就是 Git，因此开工和收尾是硬性流程，不允许省略：
+
+1. **开工**：`git pull` → 阅读 `docs/devlog/` 中最新的开发日志 → 确认需求文档当前版本与所处开发阶段。
+2. **收尾**：更新开发日志 → 通过质量检查 → `git commit` → `git push`。
+
+任何情况下不得以“未推送的提交”结束一次工作；中途被打断也要先提交并推送（可用 `wip:` 前缀），保证换一台电脑随时能接续。
+
+## 开发日志（必须）
+
+- 位置：`docs/devlog/YYYY-MM-DD-HHmm.md`，`HHmm` 为本次开工的本地时间，避免两台电脑同一天写同一文件产生冲突。
+- 每次工作新建一个文件；开工时先读该目录中文件名最新的日志接续上下文。
+- 必须包含以下小节，保证另一台电脑上的 Codex 能无缝接续：
+  - `机器`：本次工作在 Windows 还是 macOS 上进行
+  - `任务`：本次目标的一句话描述
+  - `本次完成`：改了什么、涉及哪些文件
+  - `关键决策`：为什么这么做、已确认的结论
+  - `验证`：测试 / 构建 / 运行结果
+  - `当前状态与下一步`：未完成部分与下一步计划
+  - `遗留问题`：已知坑、临时绕过、待确认事项
+- 隐私红线：日志不得记录任何被转换的用户文本内容（见需求文档隐私要求）。
+
+## 提交与推送（必须）
+
+- 一个逻辑单元完成后提交一次，至少每次工作结束前提交。
+- 提交信息采用 Conventional Commits，中文描述，前缀如：`feat:` `fix:` `docs:` `refactor:` `test:` `chore:` `wip:`。
+- 提交后立即 `git push`。
+- 单人项目默认直接在 `master` 上开发；多任务并行时才使用 `codex/xxx` 短分支，完成后合并回 master 并删除分支。
+- 开工时如发现本地有未提交改动：先判断内容；属于上一步未完成的工作就按 `wip:` 提交并推送，再 pull，避免丢失或冲突。
+
+## 质量门槛（提交前）
+
+- Rust：`cargo fmt --check`、`cargo clippy`、`cargo test` 全部通过。
+- 前端：存在 `package.json` 时，运行其中适用的 `check` / `lint` / `test` 脚本。
+- 构建：关键改动至少完成一次 debug 构建（`npm run tauri dev` 或 `npm run tauri build -- --debug`）。
+- 检查不通过不得提交；确实因环境问题无法运行的，写入日志“遗留问题”并说明原因。
+
+## 仓库卫生
+
+- 不提交：构建产物（`target/`、`node_modules/`、`dist/`、`src-tauri/target/`）、安装包（`*.msi`、`*.exe`、`*.dmg` 等）、密钥与凭证、环境文件。
+- 本地 IDE 的个人状态文件（如 `.idea/workspace.xml`）不提交；已在仓库中的共享配置保持现状。
+- 需求变更必须先更新 [docs/需求方案.md](docs/需求方案.md)（版本号、日期、变更记录），再动代码。
+

@@ -1,0 +1,26 @@
+# Rust
+target/
+**/target/
+
+# Node / 前端
+node_modules/
+dist/
+
+# Tauri / 打包产物
+src-tauri/gen/schemas/
+*.msi
+*.exe
+*.dmg
+*.AppImage
+*.deb
+
+# 环境与密钥
+.env
+.env.*
+*.pem
+*.key
+
+# 系统
+.DS_Store
+Thumbs.db
+

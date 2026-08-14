@@ -46,6 +46,7 @@ pub fn toggle_float_bar(app: &AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    println!("[StringCraft] 启动中…");
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 第二次启动（如双击快捷方式）只呼出悬浮条，不创建新实例
@@ -60,13 +61,17 @@ pub fn run() {
             let config = config::load_or_default(app.handle());
             let startup_hotkey = config.hotkey.clone();
             app.manage(ConfigState(Mutex::new(config)));
+            println!("[StringCraft] 配置已加载，快捷键：{startup_hotkey}");
 
             hotkey::install(app.handle())?;
-            if let Err(e) = hotkey::register(app.handle(), &startup_hotkey) {
-                eprintln!("[StringCraft] 全局快捷键注册失败：{e}");
+            match hotkey::register(app.handle(), &startup_hotkey) {
+                Ok(()) => println!("[StringCraft] 全局快捷键注册成功：{startup_hotkey}"),
+                Err(e) => eprintln!("[StringCraft] 全局快捷键注册失败：{e}"),
             }
 
             tray::create_tray(app)?;
+            println!("[StringCraft] 托盘已创建");
+            println!("[StringCraft] 启动完成");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
+  import { listen } from "@tauri-apps/api/event";
+  import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
   import { getConfig, showSettingsWindow, executeButton } from "../lib/api";
   import { DEFAULT_CONFIG } from "../lib/defaults";
   import type { AppConfig, TransformButton } from "../lib/types";
@@ -8,6 +10,9 @@
   let activeId: string | null = $state(null);
   let bubble: string | null = $state(null);
   let bubbleTimer: ReturnType<typeof setTimeout> | undefined;
+  let unlisten: (() => void) | undefined;
+
+  const win = getCurrentWindow();
 
   function chunkButtons(buttons: TransformButton[], rows: number): TransformButton[][] {
     if (rows < 1 || buttons.length === 0) return [buttons];
@@ -42,14 +47,29 @@
     }
   }
 
-  onMount(() => {
-    getConfig()
-      .then((cfg) => {
-        config = cfg;
-      })
-      .catch(() => {
-        showBubble("读取配置失败，使用默认配置");
-      });
+  async function refresh() {
+    try {
+      config = await getConfig();
+      resizeToFit();
+    } catch {
+      showBubble("读取配置失败，使用默认配置");
+    }
+  }
+
+  function resizeToFit() {
+    const height = Math.ceil(
+      12 + config.rows * config.buttonHeight + (config.rows - 1) * 4 + 2,
+    );
+    void win.setSize(new PhysicalSize(760, height));
+  }
+
+  onMount(async () => {
+    unlisten = await listen("config-changed", () => refresh());
+    await refresh();
+  });
+
+  onDestroy(() => {
+    unlisten?.();
   });
 </script>
 

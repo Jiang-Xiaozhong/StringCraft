@@ -5,6 +5,8 @@ mod selection;
 mod transform;
 mod tray;
 
+use crate::config::ConfigState;
+use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 
@@ -55,8 +57,16 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
+            let config = config::load_or_default(app.handle());
+            let startup_hotkey = config.hotkey.clone();
+            app.manage(ConfigState(Mutex::new(config)));
+
+            hotkey::install(app.handle())?;
+            if let Err(e) = hotkey::register(app.handle(), &startup_hotkey) {
+                eprintln!("[StringCraft] 全局快捷键注册失败：{e}");
+            }
+
             tray::create_tray(app)?;
-            hotkey::register_default(app.handle())?;
             position_float_bar(app.handle())?;
             #[cfg(target_os = "windows")]
             if let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) {
@@ -66,6 +76,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
+            commands::save_config,
             commands::open_settings,
             commands::execute_button
         ])

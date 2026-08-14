@@ -3413,6 +3413,7 @@ name = "stringcraft"
 version = "0.1.0"
 dependencies = [
  "arboard",
+ "dirs 6.0.0",
  "enigo",
  "serde",
  "serde_json",

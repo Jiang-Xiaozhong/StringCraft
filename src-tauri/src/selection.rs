@@ -3,19 +3,21 @@
 //!
 //! 隐私：转换文本仅在内存中处理，不写入日志、配置或磁盘。
 
-use crate::{config, transform};
+use crate::{config::ConfigState, transform};
 use enigo::{Key, Keyboard};
 use std::time::Duration;
-
-/// 复制/粘贴后的等待时间（毫秒），见需求 3.1 的 50~100ms 约定。
-const COPY_PASTE_DELAY_MS: u64 = 80;
+use tauri::{AppHandle, Manager};
 
 /// 选中文本过大阈值（字节），超过后不自动替换，仅复制结果到剪贴板。
 const MAX_SELECTION_BYTES: usize = 1024 * 1024;
 
 /// 执行完整替换流程，返回面向用户的中文提示。
-pub fn replace_selection(transform_id: &str) -> Result<String, String> {
-    let config = config::default_config();
+pub fn replace_selection(app: &AppHandle, transform_id: &str) -> Result<String, String> {
+    let (restore_enabled, delay_ms) = {
+        let state = app.state::<ConfigState>();
+        let config = state.0.lock().map_err(|e| e.to_string())?;
+        (config.restore_clipboard, config.replace_delay_ms as u64)
+    };
 
     // 1. 保存当前剪贴板文本；非文本内容直接放弃，避免破坏剪贴板
     let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("无法访问剪贴板：{e}"))?;
@@ -26,7 +28,7 @@ pub fn replace_selection(transform_id: &str) -> Result<String, String> {
 
     // 2. 模拟 Ctrl+C 复制选中文本
     send_shortcut(copy_key(), Key::C)?;
-    std::thread::sleep(Duration::from_millis(COPY_PASTE_DELAY_MS));
+    std::thread::sleep(Duration::from_millis(delay_ms));
 
     // 3. 读取复制结果；与备份一致判定为未选中文本
     let selected = match clipboard.get_text() {
@@ -63,10 +65,10 @@ pub fn replace_selection(transform_id: &str) -> Result<String, String> {
         };
         return Err(format!("粘贴失败：{e}，{restore_note}"));
     }
-    std::thread::sleep(Duration::from_millis(COPY_PASTE_DELAY_MS));
+    std::thread::sleep(Duration::from_millis(delay_ms));
 
     // 6. 恢复原剪贴板（可关闭，默认开启）
-    if config.restore_clipboard {
+    if restore_enabled {
         if let Err(e) = restore_clipboard(&mut clipboard, backup.as_str()) {
             return Ok(format!(
                 "转换完成，但原剪贴板恢复失败：{e}，结果保留在剪贴板"

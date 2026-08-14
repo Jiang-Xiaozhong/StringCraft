@@ -34,5 +34,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   theme: "system",
   autoStart: false,
   restoreClipboard: true,
+  replaceDelayMs: 80,
   buttons: DEFAULT_BUTTONS,
 };

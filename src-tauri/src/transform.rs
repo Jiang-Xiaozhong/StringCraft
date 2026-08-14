@@ -233,6 +233,33 @@ pub fn transform(text: &str, transform_id: &str) -> String {
     }
 }
 
+/// 判断是否为已知的内置转换 id。
+pub fn is_known_transform(transform_id: &str) -> bool {
+    matches!(
+        transform_id,
+        "upper"
+            | "lower"
+            | "capitalize-words"
+            | "uncapitalize-words"
+            | "sentence-case"
+            | "space-to-underscore"
+            | "to-camel"
+            | "camel-to-underscore"
+            | "camel-to-space"
+            | "space-to-hyphen"
+            | "underscore-to-hyphen"
+            | "hyphen-to-underscore"
+            | "underscore-to-space"
+            | "underscore-to-dot"
+            | "dot-to-underscore"
+            | "space-to-newline"
+            | "newline-to-space"
+            | "remove-symbols"
+            | "remove-spaces"
+            | "remove-newlines"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

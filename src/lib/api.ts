@@ -5,6 +5,10 @@ export async function getConfig(): Promise<AppConfig> {
   return invoke<AppConfig>("get_config");
 }
 
+export async function saveConfig(config: AppConfig): Promise<AppConfig> {
+  return invoke<AppConfig>("save_config", { config });
+}
+
 export async function showSettingsWindow(): Promise<void> {
   await invoke("open_settings");
 }

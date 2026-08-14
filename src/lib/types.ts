@@ -15,5 +15,6 @@ export interface AppConfig {
   theme: "system" | "light" | "dark";
   autoStart: boolean;
   restoreClipboard: boolean;
+  replaceDelayMs: number;
   buttons: TransformButton[];
 }

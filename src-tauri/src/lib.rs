@@ -47,7 +47,10 @@ pub fn toggle_float_bar(app: &AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     println!("[StringCraft] 启动中…");
+    let config = config::load_or_default();
+    let startup_hotkey = config.hotkey.clone();
     tauri::Builder::default()
+        .manage(ConfigState(Mutex::new(config)))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 第二次启动（如双击快捷方式）只呼出悬浮条，不创建新实例
             show_float_bar(app);
@@ -57,10 +60,7 @@ pub fn run() {
             Some(vec!["--autostart"]),
         ))
         .plugin(tauri_plugin_store::Builder::default().build())
-        .setup(|app| {
-            let config = config::load_or_default(app.handle());
-            let startup_hotkey = config.hotkey.clone();
-            app.manage(ConfigState(Mutex::new(config)));
+        .setup(move |app| {
             println!("[StringCraft] 配置已加载，快捷键：{startup_hotkey}");
 
             hotkey::install(app.handle())?;

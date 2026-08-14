@@ -4,9 +4,6 @@ use std::{
     path::{Path, PathBuf},
     sync::Mutex,
 };
-use tauri::AppHandle;
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
-use tauri::Manager;
 
 /// 全局配置状态，所有命令共享。
 pub struct ConfigState(pub Mutex<AppConfig>);
@@ -104,7 +101,7 @@ pub fn default_buttons() -> Vec<TransformButton> {
 /// 配置文件的绝对路径：
 /// Windows `%APPDATA%\StringCraft\config.json`；
 /// macOS `~/Library/Application Support/StringCraft/config.json`（需求 6.3）。
-pub fn config_path(_app: &AppHandle) -> Result<PathBuf, String> {
+pub fn config_path() -> Result<PathBuf, String> {
     #[cfg(target_os = "windows")]
     let base = std::env::var_os("APPDATA")
         .map(PathBuf::from)
@@ -116,17 +113,14 @@ pub fn config_path(_app: &AppHandle) -> Result<PathBuf, String> {
         .ok_or_else(|| "无法定位用户主目录".to_string())?;
 
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    let base = _app
-        .path()
-        .app_config_dir()
-        .map_err(|e| format!("无法定位配置目录：{e}"))?;
+    let base = dirs::config_dir().ok_or_else(|| "无法定位配置目录".to_string())?;
 
     Ok(base.join("StringCraft").join("config.json"))
 }
 
 /// 加载配置；文件不存在时创建默认配置，损坏时备份并恢复默认。
-pub fn load_or_default(app: &AppHandle) -> AppConfig {
-    let path = match config_path(app) {
+pub fn load_or_default() -> AppConfig {
+    let path = match config_path() {
         Ok(path) => path,
         Err(_) => return default_config(),
     };
@@ -153,8 +147,8 @@ pub fn load_or_default(app: &AppHandle) -> AppConfig {
 }
 
 /// 持久化配置（先写临时文件再重命名，避免写一半损坏）。
-pub fn save_config(app: &AppHandle, config: &AppConfig) -> Result<(), String> {
-    let path = config_path(app)?;
+pub fn save_config(config: &AppConfig) -> Result<(), String> {
+    let path = config_path()?;
     save_to_path(config, &path)
 }
 

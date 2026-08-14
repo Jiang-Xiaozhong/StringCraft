@@ -25,7 +25,7 @@ pub fn save_config(app: AppHandle, mut config: AppConfig) -> Result<AppConfig, S
     apply_hotkey_change(&app, &old, &config)?;
     apply_autostart_change(&app, &old, &config)?;
 
-    if let Err(e) = config::save_config(&app, &config) {
+    if let Err(e) = config::save_config(&config) {
         rollback(&app, &old, &config);
         return Err(format!("保存配置失败：{e}"));
     }

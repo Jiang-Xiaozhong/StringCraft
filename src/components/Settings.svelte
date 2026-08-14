@@ -183,7 +183,7 @@
           {status}
         </span>
       {/if}
-      <button type="button" class="ghost-button" onclick={() => win.close()}>关闭</button>
+      <button type="button" class="ghost-button" onclick={() => win.hide()}>关闭</button>
     </div>
   </header>
 

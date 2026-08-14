@@ -31,8 +31,8 @@
     if (activeId) return; // 执行期间忽略重复点击
     activeId = button.id;
     try {
-      await executeButton(button.transform);
-      showBubble("执行完成");
+      const message = await executeButton(button.transform);
+      showBubble(message);
     } catch (err) {
       showBubble(String(err));
     } finally {

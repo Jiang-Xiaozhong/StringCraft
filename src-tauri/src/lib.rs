@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 mod hotkey;
+mod selection;
 mod transform;
 mod tray;
 
@@ -57,6 +58,10 @@ pub fn run() {
             tray::create_tray(app)?;
             hotkey::register_default(app.handle())?;
             position_float_bar(app.handle())?;
+            #[cfg(target_os = "windows")]
+            if let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) {
+                apply_no_activate(&win)?;
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -66,6 +71,22 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("StringCraft 启动失败");
+}
+
+/// Windows：为悬浮条设置 WS_EX_NOACTIVATE，点击按钮时不夺取原应用焦点（F1.12）。
+#[cfg(target_os = "windows")]
+fn apply_no_activate(win: &tauri::WebviewWindow) -> tauri::Result<()> {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
+    };
+
+    let hwnd = win.hwnd()?;
+    let style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+    if style == 0 {
+        return Ok(());
+    }
+    let _ = unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_NOACTIVATE.0 as isize) };
+    Ok(())
 }
 
 /// 悬浮条首次启动显示在屏幕右上角（距上/右边缘 16px）。

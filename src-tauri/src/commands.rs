@@ -1,5 +1,5 @@
 use crate::config::{default_config, AppConfig};
-use crate::transform;
+use crate::{selection, transform};
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -13,11 +13,14 @@ pub fn open_settings(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// 执行转换。M2 已提供 20 个纯函数转换；自动替换链路（获取选中文本）在 M3 接入。
+/// 执行转换。传入文本时直接转换（调试/测试用）；
+/// 未传文本时执行完整自动替换链路（复制 → 转换 → 粘贴 → 恢复剪贴板）。
 #[tauri::command]
-pub fn execute_button(transform_id: String, text: Option<String>) -> Result<String, String> {
-    match text {
-        Some(text) => Ok(transform::transform(&text, &transform_id)),
-        None => Err("自动替换将在 M3 阶段实现".to_string()),
+pub async fn execute_button(transform_id: String, text: Option<String>) -> Result<String, String> {
+    if let Some(text) = text {
+        return Ok(transform::transform(&text, &transform_id));
     }
+    tauri::async_runtime::spawn_blocking(move || selection::replace_selection(&transform_id))
+        .await
+        .map_err(|e| format!("任务执行失败：{e}"))?
 }

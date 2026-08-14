@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
-  import { getCurrentWindow, PhysicalSize } from "@tauri-apps/api/window";
+  import { currentMonitor, getCurrentWindow, LogicalSize, PhysicalPosition } from "@tauri-apps/api/window";
   import { getConfig, showSettingsWindow, executeButton } from "../lib/api";
   import { DEFAULT_CONFIG } from "../lib/defaults";
   import type { AppConfig, TransformButton } from "../lib/types";
@@ -13,6 +13,7 @@
   let unlisten: (() => void) | undefined;
 
   const win = getCurrentWindow();
+  const BAR_WIDTH = 760;
 
   function chunkButtons(buttons: TransformButton[], rows: number): TransformButton[][] {
     if (rows < 1 || buttons.length === 0) return [buttons];
@@ -51,6 +52,7 @@
     try {
       config = await getConfig();
       resizeToFit();
+      await positionToTopRight();
     } catch {
       showBubble("读取配置失败，使用默认配置");
     }
@@ -60,7 +62,20 @@
     const height = Math.ceil(
       12 + config.rows * config.buttonHeight + (config.rows - 1) * 4 + 2,
     );
-    void win.setSize(new PhysicalSize(760, height));
+    void win.setSize(new LogicalSize(BAR_WIDTH, height));
+  }
+
+  async function positionToTopRight() {
+    try {
+      const monitor = await currentMonitor();
+      const size = await win.outerSize();
+      if (!monitor) return;
+      const x = monitor.position.x + monitor.size.width - size.width - 16;
+      const y = monitor.position.y + 16;
+      await win.setPosition(new PhysicalPosition(x, y));
+    } catch {
+      // 定位失败不影响悬浮条使用
+    }
   }
 
   onMount(async () => {

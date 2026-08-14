@@ -67,11 +67,6 @@ pub fn run() {
             }
 
             tray::create_tray(app)?;
-            position_float_bar(app.handle())?;
-            #[cfg(target_os = "windows")]
-            if let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) {
-                apply_no_activate(&win)?;
-            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -82,37 +77,4 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("StringCraft 启动失败");
-}
-
-/// Windows：为悬浮条设置 WS_EX_NOACTIVATE，点击按钮时不夺取原应用焦点（F1.12）。
-#[cfg(target_os = "windows")]
-fn apply_no_activate(win: &tauri::WebviewWindow) -> tauri::Result<()> {
-    use windows::Win32::UI::WindowsAndMessaging::{
-        GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
-    };
-
-    let hwnd = win.hwnd()?;
-    let style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
-    if style == 0 {
-        return Ok(());
-    }
-    let _ = unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_NOACTIVATE.0 as isize) };
-    Ok(())
-}
-
-/// 悬浮条首次启动显示在屏幕右上角（距上/右边缘 16px）。
-fn position_float_bar(app: &AppHandle) -> tauri::Result<()> {
-    let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) else {
-        return Ok(());
-    };
-    let Some(monitor) = win.current_monitor()? else {
-        return Ok(());
-    };
-    let size = win.outer_size()?;
-    let work = monitor.work_area();
-    let margin = 16i32;
-    let x = work.position.x + (work.size.width as i32 - size.width as i32 - margin).max(0);
-    let y = work.position.y + margin;
-    win.set_position(tauri::PhysicalPosition::new(x, y))?;
-    Ok(())
 }

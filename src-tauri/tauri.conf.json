@@ -25,7 +25,8 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "shadow": false,
-        "focus": false
+        "focus": false,
+        "focusable": false
       },
       {
         "label": "settings",

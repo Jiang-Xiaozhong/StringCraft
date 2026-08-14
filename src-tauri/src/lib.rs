@@ -72,9 +72,26 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
             commands::save_config,
+            commands::apply_no_activate,
             commands::open_settings,
             commands::execute_button
         ])
         .run(tauri::generate_context!())
         .expect("StringCraft 启动失败");
+}
+
+/// Windows：为悬浮条设置 WS_EX_NOACTIVATE，点击按钮时不夺取原应用焦点（F1.12）。
+#[cfg(target_os = "windows")]
+pub fn apply_no_activate(win: &tauri::WebviewWindow) -> tauri::Result<()> {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
+    };
+
+    let hwnd = win.hwnd()?;
+    let style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
+    if style == 0 {
+        return Ok(());
+    }
+    let _ = unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_NOACTIVATE.0 as isize) };
+    Ok(())
 }

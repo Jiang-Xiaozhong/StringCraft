@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { currentMonitor, getCurrentWindow, LogicalSize, PhysicalPosition } from "@tauri-apps/api/window";
-  import { getConfig, showSettingsWindow, executeButton } from "../lib/api";
+  import { applyNoActivate, getConfig, showSettingsWindow, executeButton } from "../lib/api";
   import { DEFAULT_CONFIG } from "../lib/defaults";
   import type { AppConfig, TransformButton } from "../lib/types";
 
@@ -53,6 +53,7 @@
       config = await getConfig();
       resizeToFit();
       await positionToTopRight();
+      await applyNoActivate();
     } catch {
       showBubble("读取配置失败，使用默认配置");
     }

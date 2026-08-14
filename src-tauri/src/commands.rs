@@ -58,6 +58,19 @@ pub fn open_settings(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 悬浮条加载完成后调用：设置不抢焦点，并定位到屏幕右上角。
+#[tauri::command]
+pub fn apply_no_activate(app: AppHandle) -> Result<(), String> {
+    let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) else {
+        return Ok(());
+    };
+    #[cfg(target_os = "windows")]
+    crate::apply_no_activate(&win).map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "windows"))]
+    let _ = &win;
+    Ok(())
+}
+
 /// 快捷键变更：先注册新键，成功后再注销旧键；失败则回滚并报错。
 fn apply_hotkey_change(app: &AppHandle, old: &AppConfig, new: &AppConfig) -> Result<(), String> {
     if old.hotkey == new.hotkey {

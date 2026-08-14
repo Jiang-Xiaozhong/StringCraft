@@ -9,6 +9,10 @@ export async function saveConfig(config: AppConfig): Promise<AppConfig> {
   return invoke<AppConfig>("save_config", { config });
 }
 
+export async function applyNoActivate(): Promise<void> {
+  await invoke("apply_no_activate");
+}
+
 export async function showSettingsWindow(): Promise<void> {
   await invoke("open_settings");
 }

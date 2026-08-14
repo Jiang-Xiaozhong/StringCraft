@@ -1,6 +1,7 @@
 export interface TransformButton {
   id: string;
-  label: string;
+  name: string;
+  description: string;
   transform: string;
 }
 

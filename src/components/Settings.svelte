@@ -10,7 +10,8 @@
   let status: string | null = $state(null);
   let recording = $state(false);
   let newTransformId = $state(DEFAULT_BUTTONS[0].transform);
-  let newLabel = $state("");
+  let newName = $state("");
+  let newDescription = $state("");
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   const win = getCurrentWindow();
@@ -148,11 +149,13 @@
     if (!source) return;
     const button: TransformButton = {
       id: `${source.transform}-${Date.now()}`,
-      label: newLabel.trim() || source.label,
+      name: newName.trim() || source.name,
       transform: source.transform,
+      description: newDescription.trim(),
     };
     scheduleSave({ ...config, buttons: [...config.buttons, button] });
-    newLabel = "";
+    newName = "";
+    newDescription = "";
     const nextButtons = [...config.buttons, button];
     const nextUnused = DEFAULT_BUTTONS.find(
       (source) => !nextButtons.some((item) => item.transform === source.transform),
@@ -213,7 +216,7 @@
 
   <section class="settings-section">
     <h2>按钮管理</h2>
-    <p class="hint">按行分组展示，可增删、上下移动（支持跨行）、修改文字；每行最多 30 个。</p>
+    <p class="hint">按行分组展示，可增删、上下移动（支持跨行）、修改名称与说明；每行最多 30 个。</p>
 
     <div class="field-row">
       <label for="rows">行数</label>
@@ -235,19 +238,35 @@
             {@const index = flatIndexOf(config.buttons, button)}
             <div class="button-list-item">
               <span class="index">{index + 1}</span>
-              <input
-                type="text"
-                value={button.label}
-                maxlength="8"
-                onchange={(e) => {
-                  const label = (e.currentTarget as HTMLInputElement).value.trim();
-                  if (!label) return;
-                  const buttons = config.buttons.map((item, i) =>
-                    i === index ? { ...item, label } : item,
-                  );
-                  scheduleSave({ ...config, buttons });
-                }}
-              />
+              <div class="button-fields">
+                <input
+                  type="text"
+                  value={button.name}
+                  maxlength="8"
+                  placeholder="名称（≤8 字）"
+                  onchange={(e) => {
+                    const name = (e.currentTarget as HTMLInputElement).value.trim();
+                    if (!name) return;
+                    const buttons = config.buttons.map((item, i) =>
+                      i === index ? { ...item, name } : item,
+                    );
+                    scheduleSave({ ...config, buttons });
+                  }}
+                />
+                <input
+                  type="text"
+                  value={button.description}
+                  maxlength="60"
+                  placeholder="说明（选填）"
+                  onchange={(e) => {
+                    const description = (e.currentTarget as HTMLInputElement).value.trim();
+                    const buttons = config.buttons.map((item, i) =>
+                      i === index ? { ...item, description } : item,
+                    );
+                    scheduleSave({ ...config, buttons });
+                  }}
+                />
+              </div>
               <code>{button.transform}</code>
               <button
                 type="button"
@@ -287,14 +306,23 @@
         disabled={unusedTransforms.length === 0}
       >
         {#each unusedTransforms as source (source.transform)}
-          <option value={source.transform}>{source.label}</option>
+          <option value={source.transform}>{source.name}</option>
         {/each}
       </select>
       <input
         type="text"
-        placeholder="按钮文字（默认用功能名，≤8 字）"
+        placeholder="名称（默认用功能名，≤8 字）"
         maxlength="8"
-        bind:value={newLabel}
+        bind:value={newName}
+        onkeydown={(e) => {
+          if (e.key === "Enter") addButton();
+        }}
+      />
+      <input
+        type="text"
+        placeholder="说明（选填）"
+        maxlength="60"
+        bind:value={newDescription}
         onkeydown={(e) => {
           if (e.key === "Enter") addButton();
         }}
@@ -418,7 +446,7 @@
   </section>
 
   <footer class="settings-footer">
-    <p>StringCraft v0.1.0 · M4 设置页</p>
+    <p>StringCraft v0.1.0 · M5 设置页</p>
   </footer>
 </main>
 
@@ -572,8 +600,14 @@
     flex: none;
   }
 
-  .button-list-item input {
-    width: 90px;
+  .button-fields {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .button-fields input {
     padding: 4px 6px;
     border: 1px solid var(--bar-border);
     border-radius: 4px;
@@ -582,13 +616,25 @@
     font-size: 13px;
   }
 
+  .button-fields input:first-child {
+    width: 90px;
+    flex: none;
+  }
+
+  .button-fields input:last-child {
+    flex: 1;
+    min-width: 0;
+  }
+
   .button-list-item code {
     font-size: 11px;
     color: var(--text-muted);
-    flex: 1;
+    flex: none;
+    max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin-left: auto;
   }
 
   .icon-button {
@@ -628,8 +674,19 @@
     font-size: 13px;
   }
 
-  .add-row input {
+  .add-row select {
+    width: 180px;
+    flex: none;
+  }
+
+  .add-row input:first-of-type {
+    width: 150px;
+    flex: none;
+  }
+
+  .add-row input:last-of-type {
     flex: 1;
+    min-width: 0;
   }
 
   .toggle-row {

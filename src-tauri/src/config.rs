@@ -35,15 +35,19 @@ impl Default for AppConfig {
 #[serde(rename_all = "camelCase", default)]
 pub struct TransformButton {
     pub id: String,
-    pub label: String,
+    #[serde(alias = "label")]
+    pub name: String,
     pub transform: String,
+    #[serde(default)]
+    pub description: String,
 }
 
-fn button(id: &str, label: &str, transform: &str) -> TransformButton {
+fn button(id: &str, name: &str, transform: &str, description: &str) -> TransformButton {
     TransformButton {
         id: id.to_string(),
-        label: label.to_string(),
+        name: name.to_string(),
         transform: transform.to_string(),
+        description: description.to_string(),
     }
 }
 
@@ -67,34 +71,116 @@ pub fn default_config() -> AppConfig {
 /// 20 个内置转换按钮：顺序固定，id 与显示文字解耦（对应需求 4.3）。
 pub fn default_buttons() -> Vec<TransformButton> {
     vec![
-        button("upper", "全大写", "upper"),
-        button("lower", "全小写", "lower"),
-        button("capitalize-words", "首字母大写", "capitalize-words"),
-        button("uncapitalize-words", "首字母小写", "uncapitalize-words"),
-        button("sentence-case", "句子首字母大写", "sentence-case"),
-        button("space-to-underscore", "空格→下划线", "space-to-underscore"),
-        button("to-camel", "下划线&空格→驼峰", "to-camel"),
-        button("camel-to-underscore", "驼峰→下划线", "camel-to-underscore"),
-        button("camel-to-space", "驼峰→空格", "camel-to-space"),
-        button("space-to-hyphen", "空格→中横线", "space-to-hyphen"),
+        button("upper", "全大写", "upper", "所有字母转为大写"),
+        button("lower", "全小写", "lower", "所有字母转为小写"),
+        button(
+            "capitalize-words",
+            "首字母大写",
+            "capitalize-words",
+            "每个单词首字母大写",
+        ),
+        button(
+            "uncapitalize-words",
+            "首字母小写",
+            "uncapitalize-words",
+            "每个单词首字母小写",
+        ),
+        button(
+            "sentence-case",
+            "句子首字母大写",
+            "sentence-case",
+            "每个句子首字母大写",
+        ),
+        button(
+            "space-to-underscore",
+            "空格→下划线",
+            "space-to-underscore",
+            "空格替换为下划线",
+        ),
+        button(
+            "to-camel",
+            "下划线&空格→驼峰",
+            "to-camel",
+            "下划线或空格分词并转为驼峰",
+        ),
+        button(
+            "camel-to-underscore",
+            "驼峰→下划线",
+            "camel-to-underscore",
+            "驼峰分词并以下划线连接",
+        ),
+        button(
+            "camel-to-space",
+            "驼峰→空格",
+            "camel-to-space",
+            "驼峰分词并以空格连接",
+        ),
+        button(
+            "space-to-hyphen",
+            "空格→中横线",
+            "space-to-hyphen",
+            "空格替换为中横线",
+        ),
         button(
             "underscore-to-hyphen",
             "下划线→中横线",
             "underscore-to-hyphen",
+            "下划线替换为中横线",
         ),
         button(
             "hyphen-to-underscore",
             "中横线→下划线",
             "hyphen-to-underscore",
+            "中横线替换为下划线",
         ),
-        button("underscore-to-space", "下划线→空格", "underscore-to-space"),
-        button("underscore-to-dot", "下划线→小数点", "underscore-to-dot"),
-        button("dot-to-underscore", "小数点→下划线", "dot-to-underscore"),
-        button("space-to-newline", "空格→换行", "space-to-newline"),
-        button("newline-to-space", "换行→空格", "newline-to-space"),
-        button("remove-symbols", "清除符号", "remove-symbols"),
-        button("remove-spaces", "清除空格", "remove-spaces"),
-        button("remove-newlines", "清除换行", "remove-newlines"),
+        button(
+            "underscore-to-space",
+            "下划线→空格",
+            "underscore-to-space",
+            "下划线替换为空格",
+        ),
+        button(
+            "underscore-to-dot",
+            "下划线→小数点",
+            "underscore-to-dot",
+            "下划线替换为小数点",
+        ),
+        button(
+            "dot-to-underscore",
+            "小数点→下划线",
+            "dot-to-underscore",
+            "小数点替换为下划线",
+        ),
+        button(
+            "space-to-newline",
+            "空格→换行",
+            "space-to-newline",
+            "空格替换为换行",
+        ),
+        button(
+            "newline-to-space",
+            "换行→空格",
+            "newline-to-space",
+            "换行替换为空格",
+        ),
+        button(
+            "remove-symbols",
+            "清除符号",
+            "remove-symbols",
+            "删除字母、数字、空白以外的字符",
+        ),
+        button(
+            "remove-spaces",
+            "清除空格",
+            "remove-spaces",
+            "删除所有空格字符",
+        ),
+        button(
+            "remove-newlines",
+            "清除换行",
+            "remove-newlines",
+            "删除所有换行符",
+        ),
     ]
 }
 
@@ -188,8 +274,8 @@ pub fn validate(config: &AppConfig) -> Result<(), String> {
         return Err("每行最多 30 个按钮".to_string());
     }
     for item in &config.buttons {
-        if item.label.trim().is_empty() {
-            return Err("按钮文字不能为空".to_string());
+        if item.name.trim().is_empty() {
+            return Err("按钮名称不能为空".to_string());
         }
         if !crate::transform::is_known_transform(&item.transform) {
             return Err(format!("未知转换功能：{}", item.transform));
@@ -209,4 +295,25 @@ fn backup_corrupted(path: &Path) {
         .unwrap_or(0);
     let backup = path.with_file_name(format!("config.json.corrupted-{stamp}"));
     let _ = fs::rename(path, backup);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TransformButton;
+
+    #[test]
+    fn migrates_legacy_label_to_name() {
+        let json = r#"{"id":"upper","label":"全大写","transform":"upper"}"#;
+        let button: TransformButton = serde_json::from_str(json).unwrap();
+        assert_eq!(button.name, "全大写");
+        assert_eq!(button.description, "");
+    }
+
+    #[test]
+    fn accepts_name_and_description() {
+        let json = r#"{"id":"upper","name":"全大写","transform":"upper","description":"所有字母转为大写"}"#;
+        let button: TransformButton = serde_json::from_str(json).unwrap();
+        assert_eq!(button.name, "全大写");
+        assert_eq!(button.description, "所有字母转为大写");
+    }
 }

@@ -10,6 +10,13 @@
   let activeId: string | null = $state(null);
   let bubble: string | null = $state(null);
   let bubbleTimer: ReturnType<typeof setTimeout> | undefined;
+  let buttonTooltip: {
+    text: string;
+    x: number;
+    y: number;
+    above: boolean;
+  } | null = $state(null);
+  let buttonTooltipTimer: ReturnType<typeof setTimeout> | undefined;
   let unlisten: (() => void) | undefined;
 
   const win = getCurrentWindow();
@@ -31,6 +38,31 @@
     bubbleTimer = setTimeout(() => {
       bubble = null;
     }, 2200);
+  }
+
+  const BUTTON_TOOLTIP_DELAY_MS = 500;
+
+  function scheduleButtonTooltip(event: MouseEvent, button: TransformButton) {
+    clearTimeout(buttonTooltipTimer);
+    const text = button.description.trim() || button.name;
+    if (!text) return;
+
+    buttonTooltipTimer = setTimeout(() => {
+      const width = Math.min(260, Math.max(140, text.length * 14 + 24));
+      const height = 34;
+      let x = event.clientX;
+      if (x - width / 2 < 8) x = width / 2 + 8;
+      if (x + width / 2 > window.innerWidth - 8) x = window.innerWidth - width / 2 - 8;
+
+      const above = event.clientY - height - 12 >= 0;
+      const y = above ? event.clientY - height - 12 : event.clientY + 12;
+      buttonTooltip = { text, x, y, above };
+    }, BUTTON_TOOLTIP_DELAY_MS);
+  }
+
+  function cancelButtonTooltip() {
+    clearTimeout(buttonTooltipTimer);
+    buttonTooltip = null;
   }
 
   async function handleClick(button: TransformButton) {
@@ -86,6 +118,7 @@
 
   onDestroy(() => {
     unlisten?.();
+    clearTimeout(buttonTooltipTimer);
   });
 </script>
 
@@ -103,10 +136,11 @@
               type="button"
               class="transform-button"
               class:is-active={activeId === button.id}
-              title={button.label}
               onclick={() => handleClick(button)}
+              onmouseenter={(event) => scheduleButtonTooltip(event, button)}
+              onmouseleave={cancelButtonTooltip}
             >
-              {button.label}
+              {button.name}
             </button>
           {/each}
         </div>
@@ -124,5 +158,16 @@
 
   {#if bubble}
     <div class="bubble" role="status">{bubble}</div>
+  {/if}
+
+  {#if buttonTooltip}
+    <div
+      class="button-tooltip"
+      class:above={buttonTooltip.above}
+      style:left="{buttonTooltip.x}px"
+      style:top="{buttonTooltip.y}px"
+    >
+      {buttonTooltip.text}
+    </div>
   {/if}
 </div>

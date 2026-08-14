@@ -156,6 +156,26 @@ button:disabled {
   z-index: 10;
 }
 
+.button-tooltip {
+  position: fixed;
+  z-index: 20;
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  transform: translate(-50%, 0);
+}
+
+.button-tooltip.above {
+  transform: translate(-50%, -100%);
+}
+
 /* ---------- 设置页 ---------- */
 .settings-page {
   height: 100vh;
@@ -264,10 +284,6 @@ button:disabled {
   width: 20px;
   color: var(--text-muted);
   font-size: 12px;
-}
-
-.button-list-item .label {
-  flex: none;
 }
 
 .button-list-item code {

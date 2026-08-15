@@ -809,6 +809,7 @@
     align-items: center;
     gap: 5px;
     flex: none;
+    margin-left: auto;
     color: var(--text-muted);
     font-size: 12px;
   }

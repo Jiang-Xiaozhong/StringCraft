@@ -37,5 +37,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   autoStart: false,
   restoreClipboard: true,
   replaceDelayMs: 80,
+  debugLog: false,
   buttons: DEFAULT_BUTTONS,
 };

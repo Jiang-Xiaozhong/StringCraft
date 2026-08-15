@@ -26,5 +26,6 @@ export interface AppConfig {
   autoStart: boolean;
   restoreClipboard: boolean;
   replaceDelayMs: number;
+  debugLog: boolean;
   buttons: TransformButton[];
 }

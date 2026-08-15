@@ -1,5 +1,5 @@
 use crate::config::{self, AppConfig, ConfigState, WindowPosition};
-use crate::{hotkey, selection, transform, FLOAT_BAR_LABEL};
+use crate::{hotkey, logging, selection, transform, FLOAT_BAR_LABEL};
 use tauri::{AppHandle, Emitter, Manager};
 
 #[tauri::command]
@@ -32,6 +32,7 @@ pub fn save_config(app: AppHandle, mut config: AppConfig) -> Result<AppConfig, S
 
     *guard = config.clone();
     drop(guard);
+    logging::log_event(&app, "配置已保存");
     let _ = app.emit_to(FLOAT_BAR_LABEL, "config-changed", ());
     Ok(config)
 }
@@ -44,6 +45,7 @@ pub async fn execute_button(
     transform_id: String,
     text: Option<String>,
 ) -> Result<String, String> {
+    logging::log_event(&app, &format!("执行转换：{transform_id}"));
     if let Some(text) = text {
         return Ok(transform::transform(&text, &transform_id));
     }
@@ -74,25 +76,41 @@ pub fn apply_no_activate(app: AppHandle) -> Result<(), String> {
 /// 悬浮条拖动结束后保存位置，不触发 config-changed 以避免位置回跳。
 #[tauri::command]
 pub fn update_float_bar_position(app: AppHandle, x: i32, y: i32) -> Result<(), String> {
-    let state = app.state::<ConfigState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let mut next = guard.clone();
-    next.position = Some(WindowPosition { x, y });
+    let next = {
+        let state = app.state::<ConfigState>();
+        let guard = state.0.lock().map_err(|e| e.to_string())?;
+        let mut next = guard.clone();
+        next.position = Some(WindowPosition { x, y });
+        next
+    };
     config::save_config(&next)?;
-    *guard = next;
+    {
+        let state = app.state::<ConfigState>();
+        let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+        *guard = next;
+    }
+    logging::log_event(&app, "悬浮条位置已保存");
     Ok(())
 }
 
 /// 悬浮条边缘拖动结束后保存宽度，不触发 config-changed 以避免布局回跳。
 #[tauri::command]
 pub fn update_float_bar_width(app: AppHandle, width: u32) -> Result<(), String> {
-    let state = app.state::<ConfigState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let mut next = guard.clone();
-    next.toolbar_width = width;
+    let mut next = {
+        let state = app.state::<ConfigState>();
+        let guard = state.0.lock().map_err(|e| e.to_string())?;
+        let mut next = guard.clone();
+        next.toolbar_width = width;
+        next
+    };
     config::normalize(&mut next);
     config::save_config(&next)?;
-    *guard = next;
+    {
+        let state = app.state::<ConfigState>();
+        let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+        *guard = next;
+    }
+    logging::log_event(&app, "悬浮条宽度已保存");
     Ok(())
 }
 

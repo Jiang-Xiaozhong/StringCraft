@@ -565,6 +565,18 @@
           updateAppearance({ restoreClipboard: e.currentTarget.checked })}
       />
     </div>
+    <div class="toggle-row">
+      <label for="debug-log">
+        调试日志
+        <span class="toggle-hint">默认关闭；开启后记录运行日志（不含被转换的文本）</span>
+      </label>
+      <input
+        id="debug-log"
+        type="checkbox"
+        checked={config.debugLog}
+        onchange={(e) => updateAppearance({ debugLog: e.currentTarget.checked })}
+      />
+    </div>
     <div class="field-row">
       <label for="delay">自动替换延迟（ms，20~1000，高级）</label>
       <input
@@ -947,6 +959,13 @@
   .toggle-row label {
     flex: 1;
     font-size: 13px;
+  }
+
+  .toggle-hint {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--text-muted);
   }
 
   .toggle-row input {

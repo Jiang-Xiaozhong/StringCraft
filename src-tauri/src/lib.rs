@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 mod hotkey;
+mod logging;
 mod selection;
 mod transform;
 mod tray;
@@ -73,11 +74,21 @@ pub fn run() {
 
             hotkey::install(app.handle())?;
             match hotkey::register(app.handle(), &startup_hotkey) {
-                Ok(()) => println!("[StringCraft] 全局快捷键注册成功：{startup_hotkey}"),
-                Err(e) => eprintln!("[StringCraft] 全局快捷键注册失败：{e}"),
+                Ok(()) => {
+                    println!("[StringCraft] 全局快捷键注册成功：{startup_hotkey}");
+                    logging::log_event(
+                        app.handle(),
+                        &format!("全局快捷键注册成功：{startup_hotkey}"),
+                    );
+                }
+                Err(e) => {
+                    eprintln!("[StringCraft] 全局快捷键注册失败：{e}");
+                    logging::log_event(app.handle(), &format!("全局快捷键注册失败：{e}"));
+                }
             }
 
             tray::create_tray(app)?;
+            logging::log_event(app.handle(), "应用启动完成");
             println!("[StringCraft] 托盘已创建");
             println!("[StringCraft] 启动完成");
             Ok(())

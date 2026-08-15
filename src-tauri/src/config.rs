@@ -30,6 +30,7 @@ pub struct AppConfig {
     pub auto_start: bool,
     pub restore_clipboard: bool,
     pub replace_delay_ms: u32,
+    pub debug_log: bool,
     pub buttons: Vec<TransformButton>,
 }
 
@@ -89,6 +90,7 @@ pub fn default_config() -> AppConfig {
         auto_start: false,
         restore_clipboard: true,
         replace_delay_ms: 80,
+        debug_log: false,
         buttons: default_buttons(),
     }
 }

@@ -379,7 +379,6 @@
                     )}
                 />
               </div>
-              <code>{button.transform}</code>
               <label class="visibility-toggle" title="显示/隐藏">
                 <input
                   type="checkbox"
@@ -803,19 +802,6 @@
     background-color: var(--control-bg);
     color: var(--text);
     font-size: 13px;
-  }
-
-  .button-list-item code {
-    flex: 1;
-    min-width: 0;
-    margin-left: 12px;
-    padding-left: 12px;
-    border-left: 1px solid var(--bar-border);
-    font-size: 11px;
-    color: var(--text-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .visibility-toggle {

@@ -30,6 +30,7 @@
     x: number;
     y: number;
     above: boolean;
+    width: number;
   } | null = $state(null);
   let buttonTooltipTimer: ReturnType<typeof setTimeout> | undefined;
   let systemDark = $state(false);
@@ -143,15 +144,37 @@
     if (!text) return;
 
     buttonTooltipTimer = setTimeout(() => {
-      const width = Math.min(260, Math.max(140, text.length * 14 + 24));
-      const height = 34;
-      let x = event.clientX;
-      if (x - width / 2 < 8) x = width / 2 + 8;
-      if (x + width / 2 > window.innerWidth - 8) x = window.innerWidth - width / 2 - 8;
+      const margin = 8;
+      const width = Math.min(
+        260,
+        Math.max(140, text.length * 14 + 24),
+        Math.max(60, window.innerWidth - margin * 2),
+      );
+      const height = Math.min(34, Math.max(20, window.innerHeight - margin * 2));
+      const x = clampNumber(
+        event.clientX,
+        margin + width / 2,
+        Math.max(margin + width / 2, window.innerWidth - width / 2 - margin),
+      );
 
-      const above = event.clientY - height - 12 >= 0;
-      const y = above ? event.clientY - height - 12 : event.clientY + 12;
-      buttonTooltip = { text, x, y, above };
+      const aboveY = event.clientY - height - 12;
+      const belowY = event.clientY + 12;
+      const fitsAbove = aboveY >= margin && aboveY + height <= window.innerHeight - margin;
+      const fitsBelow = belowY >= margin && belowY + height <= window.innerHeight - margin;
+
+      let y: number;
+      let above: boolean;
+      if (fitsAbove) {
+        y = aboveY;
+        above = true;
+      } else if (fitsBelow) {
+        y = belowY;
+        above = false;
+      } else {
+        y = margin;
+        above = false;
+      }
+      buttonTooltip = { text, x, y, above, width };
     }, BUTTON_TOOLTIP_DELAY_MS);
   }
 
@@ -431,6 +454,7 @@
       class:above={buttonTooltip.above}
       style:left="{buttonTooltip.x}px"
       style:top="{buttonTooltip.y}px"
+      style:max-width="{buttonTooltip.width}px"
     >
       {buttonTooltip.text}
     </div>

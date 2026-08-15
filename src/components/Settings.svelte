@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
+  import { flip } from "svelte/animate";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { getConfig, saveConfig } from "../lib/api";
   import { DEFAULT_BUTTONS, DEFAULT_CONFIG } from "../lib/defaults";
@@ -16,6 +17,9 @@
   let systemDark = $state(false);
   let draggingIndex: number | null = $state(null);
   let dragOverIndex: number | null = $state(null);
+  let dragOffsetY = $state(0);
+  let dragPointerStartY = 0;
+  let dragTargets: number[] = [];
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   const win = getCurrentWindow();
@@ -164,40 +168,59 @@
     scheduleSave({ ...config, buttons });
   }
 
-  function onDragStart(event: DragEvent, index: number) {
+  function onDragPointerDown(event: PointerEvent, index: number) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
     draggingIndex = index;
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", String(index));
-    }
-  }
-
-  function onDragOver(event: DragEvent, index: number) {
-    if (draggingIndex === null) return;
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     dragOverIndex = index;
+    dragPointerStartY = event.clientY;
+    dragOffsetY = 0;
+    dragTargets = Array.from(
+      document.querySelectorAll<HTMLElement>(".button-list-item"),
+    ).map((item) => {
+      const rect = item.getBoundingClientRect();
+      return rect.top + rect.height / 2;
+    });
+    window.addEventListener("pointermove", onDragPointerMove);
+    window.addEventListener("pointerup", onDragPointerUp, { once: true });
+    window.addEventListener("pointercancel", onDragPointerUp, { once: true });
   }
 
-  function onDrop(event: DragEvent, index: number) {
-    event.preventDefault();
+  function onDragPointerMove(event: PointerEvent) {
+    if (draggingIndex === null) return;
+    dragOffsetY = event.clientY - dragPointerStartY;
+
+    let targetIndex = 0;
+    for (let i = 0; i < dragTargets.length; i++) {
+      if (event.clientY < dragTargets[i]) break;
+      targetIndex = i + 1;
+    }
+    dragOverIndex = targetIndex;
+  }
+
+  function onDragPointerUp() {
     if (draggingIndex === null) {
-      resetDrag();
+      dragOverIndex = null;
       return;
     }
     const from = draggingIndex;
-    resetDrag();
-    if (from === index) return;
-
-    const buttons = [...config.buttons];
-    const [moved] = buttons.splice(from, 1);
-    buttons.splice(index, 0, moved);
-    scheduleSave({ ...config, buttons });
-  }
-
-  function resetDrag() {
+    const to = dragOverIndex ?? from;
+    window.removeEventListener("pointermove", onDragPointerMove);
+    window.removeEventListener("pointerup", onDragPointerUp);
+    window.removeEventListener("pointercancel", onDragPointerUp);
     draggingIndex = null;
     dragOverIndex = null;
+    dragOffsetY = 0;
+    dragTargets = [];
+
+    if (from !== to && to !== from + 1) {
+      const buttons = [...config.buttons];
+      const [moved] = buttons.splice(from, 1);
+      const insertIndex = to > from ? to - 1 : to;
+      buttons.splice(insertIndex, 0, moved);
+      scheduleSave({ ...config, buttons });
+    }
   }
 
   const unusedTransforms = $derived(
@@ -304,21 +327,21 @@
             <div
               class="button-list-item"
               role="listitem"
+              animate:flip={{ duration: 160 }}
               class:is-hidden={!button.visible}
               class:is-dragging={draggingIndex === index}
-              class:drag-over={dragOverIndex === index}
-              ondragover={(event) => onDragOver(event, index)}
-              ondrop={(event) => onDrop(event, index)}
+              class:drag-over={dragOverIndex === index && dragOverIndex !== draggingIndex}
+              style:transform={draggingIndex === index
+                ? `translateY(${dragOffsetY}px)`
+                : undefined}
             >
               <span
                 class="drag-handle"
-                draggable={true}
                 role="button"
                 tabindex="0"
                 aria-label="拖拽排序"
                 title="拖拽排序"
-                ondragstart={(event) => onDragStart(event, index)}
-                ondragend={resetDrag}
+                onpointerdown={(event) => onDragPointerDown(event, index)}
               >
                 ⠿
               </span>
@@ -700,7 +723,8 @@
     transition:
       opacity 0.12s ease,
       border-color 0.12s ease,
-      background 0.12s ease;
+      background 0.12s ease,
+      box-shadow 0.12s ease;
   }
 
   .button-list-item.is-hidden {
@@ -708,12 +732,14 @@
   }
 
   .button-list-item.is-dragging {
-    opacity: 0.4;
+    position: relative;
+    z-index: 2;
+    opacity: 0.78;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
   }
 
   .button-list-item.drag-over {
-    border-color: var(--accent);
-    background: var(--button-bg-active);
+    box-shadow: inset 0 2px 0 var(--accent);
   }
 
   .drag-handle {

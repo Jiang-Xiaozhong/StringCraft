@@ -7,9 +7,10 @@ use tauri::{
 
 pub fn create_tray(app: &App) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, "show", "呼出悬浮条", true, None::<&str>)?;
+    let hide = MenuItem::with_id(app, "hide", "隐藏悬浮条", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "打开设置", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &settings, &quit])?;
+    let menu = Menu::with_items(app, &[&show, &hide, &settings, &quit])?;
 
     let icon = Image::from_bytes(include_bytes!("../icons/32x32.png"))?;
 
@@ -19,6 +20,7 @@ pub fn create_tray(app: &App) -> tauri::Result<()> {
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => crate::show_float_bar(app),
+            "hide" => crate::hide_float_bar(app),
             "settings" => crate::open_settings(app),
             "quit" => app.exit(0),
             _ => {}

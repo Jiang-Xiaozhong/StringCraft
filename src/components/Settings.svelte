@@ -61,11 +61,23 @@
 
   async function doSave(next: AppConfig) {
     try {
-      config = await saveConfig(next);
+      const latest = await getConfig();
+      const patch = diffConfig(config, next);
+      config = await saveConfig({ ...latest, ...patch });
       status = "已保存";
     } catch (e) {
       status = String(e);
     }
+  }
+
+  function diffConfig(before: AppConfig, after: AppConfig): Partial<AppConfig> {
+    const patch: Partial<AppConfig> = {};
+    (Object.keys(after) as (keyof AppConfig)[]).forEach((key) => {
+      if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+        (patch as Record<string, unknown>)[key] = after[key];
+      }
+    });
+    return patch;
   }
 
   function clamp(value: number, min: number, max: number): number {

@@ -50,6 +50,7 @@
   const ROW_GAP = 4;
   const BAR_BORDER = 2;
   const CHROME_WIDTH = BAR_PADDING * 2 + SETTINGS_WIDTH + BODY_GAP + BAR_BORDER;
+  const ACTION_HEIGHT = SETTINGS_WIDTH * 2 + ROW_GAP;
 
   const effectiveTheme = $derived(
     config.theme === "system" ? (systemDark ? "dark" : "light") : config.theme,
@@ -87,9 +88,10 @@
         ? Math.max(1, Math.floor((area + ROW_GAP) / (buttonWidth + ROW_GAP)))
         : 1;
     const rows = visibleButtons.length === 0 ? 1 : Math.ceil(visibleButtons.length / perRow);
+    const contentHeight = rows * buttonHeight + (rows - 1) * ROW_GAP;
     const height = Math.max(
-      50,
-      BAR_PADDING * 2 + rows * buttonHeight + (rows - 1) * ROW_GAP + BAR_BORDER,
+      BAR_PADDING * 2 + ACTION_HEIGHT + BAR_BORDER,
+      BAR_PADDING * 2 + contentHeight + BAR_BORDER,
     );
     return { rows, height };
   }
@@ -349,6 +351,7 @@
   role="group"
   aria-label="StringCraft 工具条"
   onpointerdown={onBarPointerDown}
+  oncontextmenu={(event) => event.preventDefault()}
   style="--button-width: {config.buttonWidth}px; --button-height: {config.buttonHeight}px; --font-size: {config.fontSize}px; background: {barBackground};"
 >
   <div class="bar-body">
@@ -366,14 +369,21 @@
         </button>
       {/each}
     </div>
-    <button type="button" class="settings-button" title="设置" onclick={showSettingsWindow}>
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <path
-          d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.63l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.06 7.06 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.66 8.85a.5.5 0 0 0 .12.63l2.03 1.58c-.05.3-.08.61-.08.94s.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.63l1.92 3.32c.13.23.4.32.63.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.23.1.5 0 .63-.22l1.92-3.32a.5.5 0 0 0-.12-.63l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"
-          fill="currentColor"
-        />
-      </svg>
-    </button>
+    <div class="bar-actions">
+      <button type="button" class="settings-button" title="设置" onclick={showSettingsWindow}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path
+            d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.63l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.06 7.06 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.66 8.85a.5.5 0 0 0 .12.63l2.03 1.58c-.05.3-.08.61-.08.94s.02.64.07.94l-2.03 1.58a.5.5 0 0 0-.12.63l1.92 3.32c.13.23.4.32.63.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.23.1.5 0 .63-.22l1.92-3.32a.5.5 0 0 0-.12-.63l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"
+            fill="currentColor"
+          />
+        </svg>
+      </button>
+      <button type="button" class="hide-button" title="隐藏悬浮条" onclick={() => win.hide()}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M12 15.5 6 9.5 7.4 8.1 12 12.7 16.6 8.1 18 9.5z" fill="currentColor" />
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div

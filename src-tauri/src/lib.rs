@@ -22,6 +22,14 @@ pub fn show_float_bar(app: &AppHandle) {
     let _ = win.unminimize();
 }
 
+/// 隐藏悬浮条，托盘图标保持常驻。
+pub fn hide_float_bar(app: &AppHandle) {
+    let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) else {
+        return;
+    };
+    let _ = win.hide();
+}
+
 /// 呼出设置窗口：显示、取消最小化并聚焦，便于立即操作。
 pub fn open_settings(app: &AppHandle) {
     let Some(win) = app.get_webview_window(SETTINGS_LABEL) else {

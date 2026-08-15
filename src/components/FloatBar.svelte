@@ -46,15 +46,10 @@
   const media = window.matchMedia("(prefers-color-scheme: dark)");
 
   const BAR_PADDING = 6;
-  const SETTINGS_WIDTH = 36;
   const BODY_GAP = 6;
   const ROW_GAP = 4;
   const BAR_BORDER = 2;
   const ACTION_GAP = 4;
-  const ACTION_WIDTH_VERTICAL = SETTINGS_WIDTH;
-  const ACTION_WIDTH_HORIZONTAL = SETTINGS_WIDTH * 2 + ACTION_GAP;
-  const ACTION_HEIGHT_VERTICAL = SETTINGS_WIDTH * 2 + ACTION_GAP;
-  const ACTION_HEIGHT_HORIZONTAL = SETTINGS_WIDTH;
 
   const effectiveTheme = $derived(
     config.theme === "system" ? (systemDark ? "dark" : "light") : config.theme,
@@ -81,15 +76,22 @@
 
   function minBarWidth(): number {
     const buttonWidth = clampNumber(config.buttonWidth, 40, 200);
+    const size = actionSize();
+    const actionWidthHorizontal = size * 2 + ACTION_GAP;
     return Math.max(
       120,
-      BAR_PADDING * 2 + ACTION_WIDTH_HORIZONTAL + BODY_GAP + BAR_BORDER + buttonWidth,
+      BAR_PADDING * 2 + actionWidthHorizontal + BODY_GAP + BAR_BORDER + buttonWidth,
     );
   }
 
   function buttonAreaWidth(width: number, horizontal: boolean): number {
-    const actionWidth = horizontal ? ACTION_WIDTH_HORIZONTAL : ACTION_WIDTH_VERTICAL;
+    const size = actionSize();
+    const actionWidth = horizontal ? size * 2 + ACTION_GAP : size;
     return Math.max(0, width - (BAR_PADDING * 2 + actionWidth + BODY_GAP + BAR_BORDER));
+  }
+
+  function actionSize(): number {
+    return clampNumber(config.buttonHeight, 28, 80);
   }
 
   function rowsFor(width: number, horizontal: boolean): number {
@@ -111,7 +113,8 @@
     const horizontalRows = rowsFor(width, true);
     const actionsHorizontal = horizontalRows <= 1;
     const rows = actionsHorizontal ? horizontalRows : rowsFor(width, false);
-    const actionHeight = actionsHorizontal ? ACTION_HEIGHT_HORIZONTAL : ACTION_HEIGHT_VERTICAL;
+    const size = actionSize();
+    const actionHeight = actionsHorizontal ? size : size * 2 + ACTION_GAP;
     const contentHeight = rows * buttonHeight + (rows - 1) * ROW_GAP;
     const height = Math.max(
       BAR_PADDING * 2 + actionHeight + BAR_BORDER,
@@ -377,7 +380,7 @@
   aria-label="StringCraft 工具条"
   onpointerdown={onBarPointerDown}
   oncontextmenu={(event) => event.preventDefault()}
-  style="--button-width: {config.buttonWidth}px; --button-height: {config.buttonHeight}px; --font-size: {config.fontSize}px; background: {barBackground};"
+  style="--button-width: {config.buttonWidth}px; --button-height: {config.buttonHeight}px; --action-size: {config.buttonHeight}px; --font-size: {config.fontSize}px; background: {barBackground};"
 >
   <div class="bar-body">
     <div class="button-rows">

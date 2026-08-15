@@ -12,6 +12,10 @@ const DEFAULT_BACKGROUND_COLOR: &str = "#DCEBFA";
 const DEFAULT_BACKGROUND_COLOR_DARK: &str = "#27384A";
 const TOOLBAR_CHROME_WIDTH: u32 = 56;
 const BUTTON_GAP: u32 = 4;
+const ACTION_GAP: u32 = 4;
+const BODY_GAP: u32 = 6;
+const BAR_BORDER: u32 = 2;
+const BAR_PADDING_TOTAL: u32 = 12;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -101,8 +105,10 @@ fn default_toolbar_width() -> u32 {
 }
 
 /// 工具条最小宽度：至少容纳 1 个按钮和设置按钮。
-fn min_toolbar_width(button_width: u32) -> u32 {
-    TOOLBAR_CHROME_WIDTH + button_width
+fn min_toolbar_width(button_width: u32, button_height: u32) -> u32 {
+    // 设置/隐藏按钮为正方形，横排时操作区宽度 = 2 * 按钮高度 + 间距。
+    let action_width_horizontal = 2 * button_height + ACTION_GAP;
+    BAR_PADDING_TOTAL + action_width_horizontal + BODY_GAP + BAR_BORDER + button_width
 }
 
 /// 20 个内置转换按钮：顺序固定，id 与显示文字解耦（对应需求 4.3）。
@@ -114,7 +120,7 @@ pub fn default_buttons() -> Vec<TransformButton> {
             "capitalize-words",
             "Ab",
             "capitalize-words",
-            "每个单词首字母大写",
+            "每个单词首字母大写，其余小写",
         ),
         button(
             "uncapitalize-words",
@@ -281,9 +287,10 @@ pub fn normalize(config: &mut AppConfig) {
     config.button_width = config.button_width.clamp(40, 200);
     config.button_height = config.button_height.clamp(28, 80);
     config.font_size = config.font_size.clamp(10, 24);
-    config.toolbar_width = config
-        .toolbar_width
-        .clamp(min_toolbar_width(config.button_width), 4000);
+    config.toolbar_width = config.toolbar_width.clamp(
+        min_toolbar_width(config.button_width, config.button_height),
+        4000,
+    );
     config.opacity = config.opacity.clamp(20, 100);
     config.replace_delay_ms = config.replace_delay_ms.clamp(20, 1000);
     if !matches!(config.theme.as_str(), "system" | "light" | "dark") {

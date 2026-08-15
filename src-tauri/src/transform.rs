@@ -16,7 +16,7 @@ fn is_word_separator(c: char) -> bool {
     c.is_whitespace() || c == '_' || c == '-' || c == '.'
 }
 
-/// 每个单词首字母大写，其余字母保持原样，分隔符保留。
+/// 每个单词首字母大写，其余字母小写，分隔符保留。
 fn capitalize_words(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut word_start = true;
@@ -28,7 +28,7 @@ fn capitalize_words(text: &str) -> String {
             out.extend(c.to_uppercase());
             word_start = false;
         } else {
-            out.push(c);
+            out.extend(c.to_lowercase());
         }
     }
     out
@@ -279,7 +279,8 @@ mod tests {
             transform("hello  world", "capitalize-words"),
             "Hello  World"
         );
-        assert_eq!(transform("hello_WORLD", "capitalize-words"), "Hello_WORLD");
+        assert_eq!(transform("hello_WORLD", "capitalize-words"), "Hello_World");
+        assert_eq!(transform("THINK", "capitalize-words"), "Think");
     }
 
     #[test]

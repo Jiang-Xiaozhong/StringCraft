@@ -3,7 +3,7 @@ import type { AppConfig, TransformButton } from "./types";
 export const DEFAULT_BUTTONS: TransformButton[] = [
   { id: "upper", name: "AB", transform: "upper", description: "所有字母转为大写", visible: true },
   { id: "lower", name: "ab", transform: "lower", description: "所有字母转为小写", visible: true },
-  { id: "capitalize-words", name: "Ab", transform: "capitalize-words", description: "每个单词首字母大写", visible: true },
+  { id: "capitalize-words", name: "Ab", transform: "capitalize-words", description: "每个单词首字母大写，其余小写", visible: true },
   { id: "uncapitalize-words", name: "aB", transform: "uncapitalize-words", description: "每个单词首字母小写", visible: true },
   { id: "sentence-case", name: "Aa", transform: "sentence-case", description: "每个句子首字母大写", visible: true },
   { id: "space-to-underscore", name: "s_", transform: "space-to-underscore", description: "空格替换为下划线", visible: true },

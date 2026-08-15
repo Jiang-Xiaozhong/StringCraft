@@ -141,8 +141,8 @@ button:disabled {
 }
 
 .settings-button {
-  width: 36px;
-  height: 36px;
+  width: var(--action-size);
+  height: var(--action-size);
   display: grid;
   place-items: center;
   border-radius: var(--radius);
@@ -162,13 +162,18 @@ button:disabled {
   flex: none;
 }
 
+.bar-actions svg {
+  width: 50%;
+  height: 50%;
+}
+
 .bar-actions.is-horizontal {
   flex-direction: row;
 }
 
 .hide-button {
-  width: 36px;
-  height: 36px;
+  width: var(--action-size);
+  height: var(--action-size);
   display: grid;
   place-items: center;
   border-radius: var(--radius);

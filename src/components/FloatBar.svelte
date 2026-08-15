@@ -159,7 +159,8 @@
 
       const aboveY = event.clientY - height - 12;
       const belowY = event.clientY + 12;
-      const fitsAbove = aboveY >= margin && aboveY + height <= window.innerHeight - margin;
+      const fitsAbove =
+        aboveY - height >= margin && aboveY <= window.innerHeight - margin;
       const fitsBelow = belowY >= margin && belowY + height <= window.innerHeight - margin;
 
       let y: number;

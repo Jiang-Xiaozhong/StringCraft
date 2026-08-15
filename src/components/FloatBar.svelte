@@ -34,6 +34,7 @@
   let buttonTooltipTimer: ReturnType<typeof setTimeout> | undefined;
   let systemDark = $state(false);
   let currentBarWidth = DEFAULT_CONFIG.toolbarWidth;
+  let actionsHorizontal = $state(false);
   let maxBarWidth = 4000;
   let moveSaveTimer: ReturnType<typeof setTimeout> | undefined;
   let widthSaveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -49,8 +50,11 @@
   const BODY_GAP = 6;
   const ROW_GAP = 4;
   const BAR_BORDER = 2;
-  const CHROME_WIDTH = BAR_PADDING * 2 + SETTINGS_WIDTH + BODY_GAP + BAR_BORDER;
-  const ACTION_HEIGHT = SETTINGS_WIDTH * 2 + ROW_GAP;
+  const ACTION_GAP = 4;
+  const ACTION_WIDTH_VERTICAL = SETTINGS_WIDTH;
+  const ACTION_WIDTH_HORIZONTAL = SETTINGS_WIDTH * 2 + ACTION_GAP;
+  const ACTION_HEIGHT_VERTICAL = SETTINGS_WIDTH * 2 + ACTION_GAP;
+  const ACTION_HEIGHT_HORIZONTAL = SETTINGS_WIDTH;
 
   const effectiveTheme = $derived(
     config.theme === "system" ? (systemDark ? "dark" : "light") : config.theme,
@@ -76,24 +80,44 @@
   }
 
   function minBarWidth(): number {
-    return Math.max(120, CHROME_WIDTH + clampNumber(config.buttonWidth, 40, 200));
+    const buttonWidth = clampNumber(config.buttonWidth, 40, 200);
+    return Math.max(
+      120,
+      BAR_PADDING * 2 + ACTION_WIDTH_HORIZONTAL + BODY_GAP + BAR_BORDER + buttonWidth,
+    );
   }
 
-  function computeLayout(width: number): { rows: number; height: number } {
+  function buttonAreaWidth(width: number, horizontal: boolean): number {
+    const actionWidth = horizontal ? ACTION_WIDTH_HORIZONTAL : ACTION_WIDTH_VERTICAL;
+    return Math.max(0, width - (BAR_PADDING * 2 + actionWidth + BODY_GAP + BAR_BORDER));
+  }
+
+  function rowsFor(width: number, horizontal: boolean): number {
     const buttonWidth = clampNumber(config.buttonWidth, 40, 200);
-    const buttonHeight = clampNumber(config.buttonHeight, 28, 80);
-    const area = Math.max(0, width - CHROME_WIDTH);
+    const area = buttonAreaWidth(width, horizontal);
     const perRow =
       area >= buttonWidth
         ? Math.max(1, Math.floor((area + ROW_GAP) / (buttonWidth + ROW_GAP)))
         : 1;
-    const rows = visibleButtons.length === 0 ? 1 : Math.ceil(visibleButtons.length / perRow);
+    return visibleButtons.length === 0 ? 1 : Math.ceil(visibleButtons.length / perRow);
+  }
+
+  function computeLayout(width: number): {
+    rows: number;
+    height: number;
+    actionsHorizontal: boolean;
+  } {
+    const buttonHeight = clampNumber(config.buttonHeight, 28, 80);
+    const horizontalRows = rowsFor(width, true);
+    const actionsHorizontal = horizontalRows <= 1;
+    const rows = actionsHorizontal ? horizontalRows : rowsFor(width, false);
+    const actionHeight = actionsHorizontal ? ACTION_HEIGHT_HORIZONTAL : ACTION_HEIGHT_VERTICAL;
     const contentHeight = rows * buttonHeight + (rows - 1) * ROW_GAP;
     const height = Math.max(
-      BAR_PADDING * 2 + ACTION_HEIGHT + BAR_BORDER,
+      BAR_PADDING * 2 + actionHeight + BAR_BORDER,
       BAR_PADDING * 2 + contentHeight + BAR_BORDER,
     );
-    return { rows, height };
+    return { rows, height, actionsHorizontal };
   }
 
   function updateSystemDark() {
@@ -172,6 +196,7 @@
     const clampedWidth = clampNumber(width, minBarWidth(), maxBarWidth);
     currentBarWidth = clampedWidth;
     const layout = computeLayout(clampedWidth);
+    actionsHorizontal = layout.actionsHorizontal;
     await win.setSize(
       new LogicalSize(Math.round(clampedWidth), Math.round(layout.height)),
     );
@@ -369,7 +394,7 @@
         </button>
       {/each}
     </div>
-    <div class="bar-actions">
+    <div class="bar-actions" class:is-horizontal={actionsHorizontal}>
       <button type="button" class="settings-button" title="设置" onclick={showSettingsWindow}>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path

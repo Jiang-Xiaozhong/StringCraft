@@ -162,6 +162,10 @@ button:disabled {
   flex: none;
 }
 
+.bar-actions.is-horizontal {
+  flex-direction: row;
+}
+
 .hide-button {
   width: 36px;
   height: 36px;

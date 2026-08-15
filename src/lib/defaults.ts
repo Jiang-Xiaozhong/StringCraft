@@ -26,7 +26,7 @@ export const DEFAULT_BUTTONS: TransformButton[] = [
 export const DEFAULT_CONFIG: AppConfig = {
   version: 1,
   hotkey: "Ctrl+Alt+Space",
-  rows: 2,
+  toolbarWidth: 812,
   buttonWidth: 72,
   buttonHeight: 32,
   fontSize: 13,

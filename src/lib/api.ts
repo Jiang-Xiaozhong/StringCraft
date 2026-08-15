@@ -17,6 +17,10 @@ export async function saveFloatBarPosition(x: number, y: number): Promise<void> 
   await invoke("update_float_bar_position", { x, y });
 }
 
+export async function saveFloatBarWidth(width: number): Promise<void> {
+  await invoke("update_float_bar_width", { width });
+}
+
 export async function showSettingsWindow(): Promise<void> {
   await invoke("open_settings");
 }

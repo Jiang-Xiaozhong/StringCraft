@@ -10,13 +10,15 @@ pub struct ConfigState(pub Mutex<AppConfig>);
 
 const DEFAULT_BACKGROUND_COLOR: &str = "#DCEBFA";
 const DEFAULT_BACKGROUND_COLOR_DARK: &str = "#27384A";
+const TOOLBAR_CHROME_WIDTH: u32 = 56;
+const BUTTON_GAP: u32 = 4;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AppConfig {
     pub version: u32,
     pub hotkey: String,
-    pub rows: u32,
+    pub toolbar_width: u32,
     pub button_width: u32,
     pub button_height: u32,
     pub font_size: u32,
@@ -75,7 +77,7 @@ pub fn default_config() -> AppConfig {
     AppConfig {
         version: 1,
         hotkey: crate::hotkey::default_hotkey().to_string(),
-        rows: 2,
+        toolbar_width: default_toolbar_width(),
         button_width: 72,
         button_height: 32,
         font_size: 13,
@@ -89,6 +91,16 @@ pub fn default_config() -> AppConfig {
         replace_delay_ms: 80,
         buttons: default_buttons(),
     }
+}
+
+/// 默认工具条宽度：恰好容纳 10 个默认宽度按钮（72px）。
+fn default_toolbar_width() -> u32 {
+    TOOLBAR_CHROME_WIDTH + 10 * 72 + 9 * BUTTON_GAP
+}
+
+/// 工具条最小宽度：至少容纳 1 个按钮和设置按钮。
+fn min_toolbar_width(button_width: u32) -> u32 {
+    TOOLBAR_CHROME_WIDTH + button_width
 }
 
 /// 20 个内置转换按钮：顺序固定，id 与显示文字解耦（对应需求 4.3）。
@@ -264,10 +276,12 @@ fn save_to_path(config: &AppConfig, path: &Path) -> Result<(), String> {
 
 /// 数值取边界、非法枚举回退默认。
 pub fn normalize(config: &mut AppConfig) {
-    config.rows = config.rows.clamp(1, 3);
     config.button_width = config.button_width.clamp(40, 200);
     config.button_height = config.button_height.clamp(28, 80);
     config.font_size = config.font_size.clamp(10, 24);
+    config.toolbar_width = config
+        .toolbar_width
+        .clamp(min_toolbar_width(config.button_width), 4000);
     config.opacity = config.opacity.clamp(20, 100);
     config.replace_delay_ms = config.replace_delay_ms.clamp(20, 1000);
     if !matches!(config.theme.as_str(), "system" | "light" | "dark") {
@@ -280,17 +294,8 @@ pub fn normalize(config: &mut AppConfig) {
     );
 }
 
-/// 逻辑校验：行数/按钮数量/按钮内容/快捷键格式。
+/// 逻辑校验：按钮内容/快捷键格式。
 pub fn validate(config: &AppConfig) -> Result<(), String> {
-    if !(1..=3).contains(&config.rows) {
-        return Err("行数需在 1~3 之间".to_string());
-    }
-    if config.buttons.len() > 90 {
-        return Err("按钮总数不能超过 90 个".to_string());
-    }
-    if config.buttons.len() > (config.rows as usize) * 30 {
-        return Err("每行最多 30 个按钮".to_string());
-    }
     if !(20..=100).contains(&config.opacity) {
         return Err("背景不透明度需在 20~100 之间".to_string());
     }

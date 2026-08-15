@@ -137,20 +137,6 @@
   }
 
   // ---------- 按钮管理 ----------
-  function groupedRows(buttons: TransformButton[], rows: number): TransformButton[][] {
-    if (rows < 1 || buttons.length === 0) return [buttons];
-    const perRow = Math.ceil(buttons.length / rows);
-    const groups: TransformButton[][] = [];
-    for (let i = 0; i < buttons.length; i += perRow) {
-      groups.push(buttons.slice(i, i + perRow));
-    }
-    return groups;
-  }
-
-  function updateRows(value: number) {
-    scheduleSave({ ...config, rows: clamp(Math.round(value), 1, 3) });
-  }
-
   function removeButton(index: number) {
     const buttons = config.buttons.filter((_, i) => i !== index);
     scheduleSave({ ...config, buttons });
@@ -310,25 +296,10 @@
 
   <section class="settings-section">
     <h2>按钮管理</h2>
-    <p class="hint">按住每项左侧拖拽手柄可跨行排序；可增删、显示/隐藏、修改名称与说明；每行最多 30 个。</p>
+    <p class="hint">按住每项左侧拖拽手柄可任意调整顺序；可增删、显示/隐藏、修改名称与说明。</p>
 
-    <div class="field-row">
-      <label for="rows">行数</label>
-      <input
-        id="rows"
-        type="number"
-        min="1"
-        max="3"
-        value={config.rows}
-        onchange={(e) => numericInput(e, 1, 3, updateRows)}
-      />
-    </div>
-
-    {#each groupedRows(config.buttons, config.rows) as row, rowIndex (rowIndex)}
-      <div class="row-block">
-        <h3>第 {rowIndex + 1} 行（{row.length} 个）</h3>
-        <div class="button-list" role="list">
-          {#each row as button (button.id)}
+    <div class="button-list" role="list">
+          {#each config.buttons as button (button.id)}
             {@const index = flatIndexOf(config.buttons, button)}
             <div
               class="button-list-item"
@@ -393,9 +364,7 @@
               </button>
             </div>
           {/each}
-        </div>
-      </div>
-    {/each}
+    </div>
 
     <div class="add-row">
       <select
@@ -672,9 +641,24 @@
     padding: 6px 10px;
     border: 1px solid var(--bar-border);
     border-radius: 6px;
-    background: var(--button-bg);
+    background-color: var(--control-bg);
     color: var(--text);
     font-size: 13px;
+  }
+
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--control-bg);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 28px;
+  }
+
+  select option {
+    background-color: var(--control-bg);
+    color: var(--text);
   }
 
   .field-row input[type="range"] {
@@ -695,17 +679,6 @@
 
   input.recording {
     outline: 2px solid var(--accent);
-  }
-
-  .row-block {
-    margin-bottom: 14px;
-  }
-
-  .row-block h3 {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-bottom: 6px;
   }
 
   .button-list {
@@ -776,7 +749,7 @@
     padding: 4px 6px;
     border: 1px solid var(--bar-border);
     border-radius: 4px;
-    background: var(--button-bg);
+    background-color: var(--control-bg);
     color: var(--text);
     font-size: 13px;
   }
@@ -839,7 +812,7 @@
     padding: 6px 10px;
     border: 1px solid var(--bar-border);
     border-radius: 6px;
-    background: var(--button-bg);
+    background-color: var(--control-bg);
     color: var(--text);
     font-size: 13px;
   }

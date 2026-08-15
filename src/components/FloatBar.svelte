@@ -14,6 +14,7 @@
     executeButton,
     getConfig,
     saveFloatBarPosition,
+    saveFloatBarWidth,
     showSettingsWindow,
   } from "../lib/api";
   import { DEFAULT_CONFIG } from "../lib/defaults";
@@ -31,9 +32,12 @@
     above: boolean;
   } | null = $state(null);
   let buttonTooltipTimer: ReturnType<typeof setTimeout> | undefined;
-  let effectiveButtonWidth = $state(72);
   let systemDark = $state(false);
+  let currentBarWidth = DEFAULT_CONFIG.toolbarWidth;
+  let maxBarWidth = 4000;
   let moveSaveTimer: ReturnType<typeof setTimeout> | undefined;
+  let widthSaveTimer: ReturnType<typeof setTimeout> | undefined;
+  let resizeState: { startX: number; startWidth: number } | null = null;
   let unlisten: (() => void) | undefined;
   let unlistenMove: (() => void) | undefined;
 
@@ -59,8 +63,6 @@
   const visibleButtons = $derived(
     config.buttons.filter((button) => button.visible !== false),
   );
-  const rowCount = $derived(clampNumber(config.rows, 1, 3));
-  const rowGroups = $derived(chunkButtons(visibleButtons, rowCount));
 
   $effect(() => {
     document.documentElement.dataset.theme = effectiveTheme;
@@ -72,19 +74,24 @@
     return Math.min(max, Math.max(min, value));
   }
 
-  function chunkButtons(buttons: TransformButton[], rows: number): TransformButton[][] {
-    if (rows < 1 || buttons.length === 0) return [buttons];
-    const perRow = Math.ceil(buttons.length / rows);
-    const result: TransformButton[][] = [];
-    for (let i = 0; i < buttons.length; i += perRow) {
-      result.push(buttons.slice(i, i + perRow));
-    }
-    return result;
+  function minBarWidth(): number {
+    return Math.max(120, CHROME_WIDTH + clampNumber(config.buttonWidth, 40, 200));
   }
 
-  function computeBarWidth(buttonCount: number, buttonWidth: number): number {
-    if (buttonCount <= 0) return CHROME_WIDTH;
-    return CHROME_WIDTH + buttonCount * buttonWidth + (buttonCount - 1) * ROW_GAP;
+  function computeLayout(width: number): { rows: number; height: number } {
+    const buttonWidth = clampNumber(config.buttonWidth, 40, 200);
+    const buttonHeight = clampNumber(config.buttonHeight, 28, 80);
+    const area = Math.max(0, width - CHROME_WIDTH);
+    const perRow =
+      area >= buttonWidth
+        ? Math.max(1, Math.floor((area + ROW_GAP) / (buttonWidth + ROW_GAP)))
+        : 1;
+    const rows = visibleButtons.length === 0 ? 1 : Math.ceil(visibleButtons.length / perRow);
+    const height = Math.max(
+      50,
+      BAR_PADDING * 2 + rows * buttonHeight + (rows - 1) * ROW_GAP + BAR_BORDER,
+    );
+    return { rows, height };
   }
 
   function updateSystemDark() {
@@ -152,43 +159,20 @@
     }
   }
 
-  async function resizeToFit() {
-    const visible = visibleButtons;
-    const rows = clampNumber(config.rows, 1, 3);
-    const groups = chunkButtons(visible, rows);
-    const maxButtons = groups.reduce((max, row) => Math.max(max, row.length), 0);
-
-    let buttonWidth = clampNumber(config.buttonWidth, 40, 200);
-    let barWidth = computeBarWidth(maxButtons, buttonWidth);
-
-    try {
-      const monitor = await activeMonitor();
-      if (monitor && maxButtons > 0) {
-        const usable = Math.max(CHROME_WIDTH, monitor.size.width - 32);
-        const availableForButtons = Math.max(0, usable - computeBarWidth(0, buttonWidth));
-        const available = Math.floor(
-          (availableForButtons - (maxButtons - 1) * ROW_GAP) / maxButtons,
-        );
-        if (available < buttonWidth) {
-          buttonWidth = clampNumber(available, 36, buttonWidth);
-          barWidth = computeBarWidth(maxButtons, buttonWidth);
-          if (barWidth > usable) barWidth = usable;
-        }
-      }
-    } catch {
-      // 无法获取显示器信息时按配置宽度展示
+  async function updateScreenConstraints() {
+    const monitor = await activeMonitor();
+    if (monitor) {
+      maxBarWidth = Math.max(minBarWidth(), monitor.size.width - 32);
     }
+  }
 
-    barWidth = Math.max(120, barWidth);
-    effectiveButtonWidth = buttonWidth;
-    const renderedRowCount = Math.max(1, groups.length);
-    const height = Math.ceil(
-      BAR_PADDING * 2 +
-        renderedRowCount * config.buttonHeight +
-        (renderedRowCount - 1) * ROW_GAP +
-        BAR_BORDER,
+  async function applySize(width: number) {
+    const clampedWidth = clampNumber(width, minBarWidth(), maxBarWidth);
+    currentBarWidth = clampedWidth;
+    const layout = computeLayout(clampedWidth);
+    await win.setSize(
+      new LogicalSize(Math.round(clampedWidth), Math.round(layout.height)),
     );
-    void win.setSize(new LogicalSize(Math.round(barWidth), height));
   }
 
   async function positionToTopRight() {
@@ -266,10 +250,55 @@
     }, 300);
   }
 
+  function onBarPointerDown(event: PointerEvent) {
+    if (event.button !== 0) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button, input, select, textarea, .resize-handle")) return;
+    void win.startDragging();
+  }
+
+  function onResizePointerDown(event: PointerEvent) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    resizeState = { startX: event.screenX, startWidth: currentBarWidth };
+    window.addEventListener("pointermove", onResizePointerMove);
+    window.addEventListener("pointerup", onResizePointerUp, { once: true });
+    window.addEventListener("pointercancel", onResizePointerUp, { once: true });
+  }
+
+  function onResizePointerMove(event: PointerEvent) {
+    if (!resizeState) return;
+    const delta = event.screenX - resizeState.startX;
+    const nextWidth = clampNumber(
+      Math.round(resizeState.startWidth + delta),
+      minBarWidth(),
+      maxBarWidth,
+    );
+    void applySize(nextWidth);
+  }
+
+  function onResizePointerUp() {
+    if (!resizeState) return;
+    resizeState = null;
+    window.removeEventListener("pointermove", onResizePointerMove);
+    window.removeEventListener("pointerup", onResizePointerUp);
+    window.removeEventListener("pointercancel", onResizePointerUp);
+    persistBarWidth(currentBarWidth);
+  }
+
+  function persistBarWidth(width: number) {
+    clearTimeout(widthSaveTimer);
+    widthSaveTimer = setTimeout(() => {
+      void saveFloatBarWidth(Math.round(width));
+    }, 250);
+  }
+
   async function loadInitial() {
     try {
       config = await getConfig();
-      await resizeToFit();
+      await updateScreenConstraints();
+      await applySize(config.toolbarWidth);
       await restorePosition();
       await applyNoActivate();
     } catch {
@@ -280,7 +309,8 @@
   async function refreshFromConfig() {
     try {
       config = await getConfig();
-      await resizeToFit();
+      await updateScreenConstraints();
+      await applySize(config.toolbarWidth);
       await ensurePositionInScreen();
       await applyNoActivate();
     } catch {
@@ -304,34 +334,36 @@
     unlisten?.();
     unlistenMove?.();
     media.removeEventListener("change", updateSystemDark);
+    window.removeEventListener("pointermove", onResizePointerMove);
+    window.removeEventListener("pointerup", onResizePointerUp);
+    window.removeEventListener("pointercancel", onResizePointerUp);
     clearTimeout(buttonTooltipTimer);
     clearTimeout(bubbleTimer);
     clearTimeout(moveSaveTimer);
+    clearTimeout(widthSaveTimer);
   });
 </script>
 
 <div
   class="float-bar"
-  data-tauri-drag-region
-  style="--button-width: {effectiveButtonWidth}px; --button-height: {config.buttonHeight}px; --font-size: {config.fontSize}px; background: {barBackground};"
+  role="group"
+  aria-label="StringCraft 工具条"
+  onpointerdown={onBarPointerDown}
+  style="--button-width: {config.buttonWidth}px; --button-height: {config.buttonHeight}px; --font-size: {config.fontSize}px; background: {barBackground};"
 >
-  <div class="bar-body" data-tauri-drag-region>
-    <div class="button-rows" data-tauri-drag-region>
-      {#each rowGroups as row, rowIndex (rowIndex)}
-        <div class="button-row" data-tauri-drag-region>
-          {#each row as button (button.id)}
-            <button
-              type="button"
-              class="transform-button"
-              class:is-active={activeId === button.id}
-              onclick={() => handleClick(button)}
-              onmouseenter={(event) => scheduleButtonTooltip(event, button)}
-              onmouseleave={cancelButtonTooltip}
-            >
-              {button.name}
-            </button>
-          {/each}
-        </div>
+  <div class="bar-body">
+    <div class="button-rows">
+      {#each visibleButtons as button (button.id)}
+        <button
+          type="button"
+          class="transform-button"
+          class:is-active={activeId === button.id}
+          onclick={() => handleClick(button)}
+          onmouseenter={(event) => scheduleButtonTooltip(event, button)}
+          onmouseleave={cancelButtonTooltip}
+        >
+          {button.name}
+        </button>
       {/each}
     </div>
     <button type="button" class="settings-button" title="设置" onclick={showSettingsWindow}>
@@ -343,6 +375,13 @@
       </svg>
     </button>
   </div>
+
+  <div
+    class="resize-handle"
+    role="presentation"
+    aria-hidden="true"
+    onpointerdown={onResizePointerDown}
+  ></div>
 
   {#if bubble}
     <div class="bubble" role="status">{bubble}</div>

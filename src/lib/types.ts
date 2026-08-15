@@ -14,7 +14,7 @@ export interface WindowPosition {
 export interface AppConfig {
   version: number;
   hotkey: string;
-  rows: number;
+  toolbarWidth: number;
   buttonWidth: number;
   buttonHeight: number;
   fontSize: number;

@@ -83,6 +83,19 @@ pub fn update_float_bar_position(app: AppHandle, x: i32, y: i32) -> Result<(), S
     Ok(())
 }
 
+/// 悬浮条边缘拖动结束后保存宽度，不触发 config-changed 以避免布局回跳。
+#[tauri::command]
+pub fn update_float_bar_width(app: AppHandle, width: u32) -> Result<(), String> {
+    let state = app.state::<ConfigState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let mut next = guard.clone();
+    next.toolbar_width = width;
+    config::normalize(&mut next);
+    config::save_config(&next)?;
+    *guard = next;
+    Ok(())
+}
+
 /// 快捷键变更：先注册新键，成功后再注销旧键；失败则回滚并报错。
 fn apply_hotkey_change(app: &AppHandle, old: &AppConfig, new: &AppConfig) -> Result<(), String> {
     if old.hotkey == new.hotkey {

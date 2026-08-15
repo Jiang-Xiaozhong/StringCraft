@@ -6,6 +6,7 @@
 :root[data-theme="light"] {
   color-scheme: light;
   --settings-bg: #f9fafb;
+  --control-bg: #ffffff;
   --bar-border: rgba(0, 0, 0, 0.1);
   --button-bg: rgba(255, 255, 255, 0.52);
   --button-bg-hover: rgba(255, 255, 255, 0.82);
@@ -20,6 +21,7 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --settings-bg: #1f2430;
+  --control-bg: #2b3242;
   --bar-border: rgba(255, 255, 255, 0.14);
   --button-bg: rgba(255, 255, 255, 0.08);
   --button-bg-hover: rgba(255, 255, 255, 0.16);
@@ -94,22 +96,17 @@ button:disabled {
 
 .button-rows {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-}
-
-.button-row {
-  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 4px;
   flex: 1;
   min-width: 0;
 }
 
 .transform-button {
-  flex: 1 1 0;
-  min-width: 36px;
+  flex: 0 0 var(--button-width);
+  width: var(--button-width);
+  min-width: 0;
   max-width: var(--button-width);
   height: var(--button-height);
   padding: 0 8px;
@@ -156,6 +153,17 @@ button:disabled {
 .settings-button:hover {
   background: var(--button-bg-hover);
   color: var(--text);
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 5;
+  touch-action: none;
 }
 
 .bubble {

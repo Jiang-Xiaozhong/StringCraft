@@ -593,6 +593,7 @@
 
   <footer class="settings-footer">
     <p>StringCraft v0.1.0 · M5 设置页</p>
+    <p>有任何问题或建议请反馈至邮箱 <a href="mailto:jxzlh1208@163.com">jxzlh1208@163.com</a></p>
   </footer>
 </main>
 
@@ -976,5 +977,22 @@
     padding: 14px 24px;
     color: var(--text-muted);
     font-size: 12px;
+  }
+
+  .settings-footer p {
+    margin-bottom: 4px;
+  }
+
+  .settings-footer p:last-child {
+    margin-bottom: 0;
+  }
+
+  .settings-footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .settings-footer a:hover {
+    text-decoration: underline;
   }
 </style>

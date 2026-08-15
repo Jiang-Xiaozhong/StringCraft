@@ -33,6 +33,8 @@
     width: number;
   } | null = $state(null);
   let buttonTooltipTimer: ReturnType<typeof setTimeout> | undefined;
+  let tooltipMouse: { x: number; y: number } | null = null;
+  let tooltipText = "";
   let systemDark = $state(false);
   let currentBarWidth = DEFAULT_CONFIG.toolbarWidth;
   let actionsHorizontal = $state(false);
@@ -138,50 +140,70 @@
 
   const BUTTON_TOOLTIP_DELAY_MS = 500;
 
+  function computeTooltipPlacement(text: string, mouseX: number, mouseY: number) {
+    const margin = 8;
+    const width = Math.min(
+      260,
+      Math.max(140, text.length * 14 + 24),
+      Math.max(60, window.innerWidth - margin * 2),
+    );
+    const height = Math.min(34, Math.max(20, window.innerHeight - margin * 2));
+    const x = clampNumber(
+      mouseX,
+      margin + width / 2,
+      Math.max(margin + width / 2, window.innerWidth - width / 2 - margin),
+    );
+
+    const aboveY = mouseY - 12;
+    const belowY = mouseY + 12;
+    const fitsAbove = aboveY - height >= margin && aboveY <= window.innerHeight - margin;
+    const fitsBelow = belowY >= margin && belowY + height <= window.innerHeight - margin;
+
+    let y: number;
+    let above: boolean;
+    if (fitsAbove) {
+      y = aboveY;
+      above = true;
+    } else if (fitsBelow) {
+      y = belowY;
+      above = false;
+    } else {
+      y = margin;
+      above = false;
+    }
+    return { x, y, above, width };
+  }
+
   function scheduleButtonTooltip(event: MouseEvent, button: TransformButton) {
     clearTimeout(buttonTooltipTimer);
     const text = button.description.trim() || button.name;
     if (!text) return;
 
+    tooltipText = text;
+    tooltipMouse = { x: event.clientX, y: event.clientY };
     buttonTooltipTimer = setTimeout(() => {
-      const margin = 8;
-      const width = Math.min(
-        260,
-        Math.max(140, text.length * 14 + 24),
-        Math.max(60, window.innerWidth - margin * 2),
-      );
-      const height = Math.min(34, Math.max(20, window.innerHeight - margin * 2));
-      const x = clampNumber(
-        event.clientX,
-        margin + width / 2,
-        Math.max(margin + width / 2, window.innerWidth - width / 2 - margin),
-      );
-
-      const aboveY = event.clientY - height - 12;
-      const belowY = event.clientY + 12;
-      const fitsAbove =
-        aboveY - height >= margin && aboveY <= window.innerHeight - margin;
-      const fitsBelow = belowY >= margin && belowY + height <= window.innerHeight - margin;
-
-      let y: number;
-      let above: boolean;
-      if (fitsAbove) {
-        y = aboveY;
-        above = true;
-      } else if (fitsBelow) {
-        y = belowY;
-        above = false;
-      } else {
-        y = margin;
-        above = false;
-      }
-      buttonTooltip = { text, x, y, above, width };
+      if (!tooltipMouse) return;
+      buttonTooltip = {
+        text,
+        ...computeTooltipPlacement(text, tooltipMouse.x, tooltipMouse.y),
+      };
     }, BUTTON_TOOLTIP_DELAY_MS);
+  }
+
+  function updateButtonTooltipPosition(event: MouseEvent) {
+    tooltipMouse = { x: event.clientX, y: event.clientY };
+    if (buttonTooltip && tooltipText) {
+      buttonTooltip = {
+        text: tooltipText,
+        ...computeTooltipPlacement(tooltipText, tooltipMouse.x, tooltipMouse.y),
+      }
+    }
   }
 
   function cancelButtonTooltip() {
     clearTimeout(buttonTooltipTimer);
     buttonTooltip = null;
+    tooltipMouse = null;
   }
 
   async function handleClick(button: TransformButton) {
@@ -413,9 +435,10 @@
           type="button"
           class="transform-button"
           class:is-active={activeId === button.id}
-          onclick={() => handleClick(button)}
-          onmouseenter={(event) => scheduleButtonTooltip(event, button)}
-          onmouseleave={cancelButtonTooltip}
+              onclick={() => handleClick(button)}
+              onmouseenter={(event) => scheduleButtonTooltip(event, button)}
+              onmousemove={updateButtonTooltipPosition}
+              onmouseleave={cancelButtonTooltip}
         >
           {button.name}
         </button>

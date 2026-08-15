@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { getConfig, saveConfig } from "../lib/api";
   import { DEFAULT_BUTTONS, DEFAULT_CONFIG } from "../lib/defaults";
+  import { darkenHex, MACARON_COLORS } from "../lib/theme";
   import type { AppConfig, TransformButton } from "../lib/types";
 
   let config: AppConfig = $state(structuredClone(DEFAULT_CONFIG));
@@ -12,16 +13,40 @@
   let newTransformId = $state(DEFAULT_BUTTONS[0].transform);
   let newName = $state("");
   let newDescription = $state("");
+  let systemDark = $state(false);
+  let draggingIndex: number | null = $state(null);
+  let dragOverIndex: number | null = $state(null);
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   const win = getCurrentWindow();
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+  const effectiveTheme = $derived(
+    config.theme === "system" ? (systemDark ? "dark" : "light") : config.theme,
+  );
+
+  $effect(() => {
+    document.documentElement.dataset.theme = effectiveTheme;
+    document.documentElement.style.colorScheme = effectiveTheme;
+  });
+
+  function updateSystemDark() {
+    systemDark = media.matches;
+  }
 
   onMount(async () => {
+    updateSystemDark();
+    media.addEventListener("change", updateSystemDark);
     try {
       config = await getConfig();
     } catch (e) {
       loadError = String(e);
     }
+  });
+
+  onDestroy(() => {
+    media.removeEventListener("change", updateSystemDark);
+    clearTimeout(saveTimer);
   });
 
   function scheduleSave(next: AppConfig) {
@@ -126,16 +151,67 @@
     scheduleSave({ ...config, rows: clamp(Math.round(value), 1, 3) });
   }
 
-  function moveButton(from: number, to: number) {
-    const buttons = [...config.buttons];
-    if (to < 0 || to >= buttons.length) return;
-    [buttons[from], buttons[to]] = [buttons[to], buttons[from]];
-    scheduleSave({ ...config, buttons });
-  }
-
   function removeButton(index: number) {
     const buttons = config.buttons.filter((_, i) => i !== index);
     scheduleSave({ ...config, buttons });
+  }
+
+  function updateButtonName(index: number, name: string) {
+    if (!name.trim()) return;
+    const buttons = config.buttons.map((item, i) =>
+      i === index ? { ...item, name: name.trim() } : item,
+    );
+    scheduleSave({ ...config, buttons });
+  }
+
+  function updateButtonDescription(index: number, description: string) {
+    const buttons = config.buttons.map((item, i) =>
+      i === index ? { ...item, description: description.trim() } : item,
+    );
+    scheduleSave({ ...config, buttons });
+  }
+
+  function updateButtonVisible(index: number, visible: boolean) {
+    const buttons = config.buttons.map((item, i) =>
+      i === index ? { ...item, visible } : item,
+    );
+    scheduleSave({ ...config, buttons });
+  }
+
+  function onDragStart(event: DragEvent, index: number) {
+    draggingIndex = index;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", String(index));
+    }
+  }
+
+  function onDragOver(event: DragEvent, index: number) {
+    if (draggingIndex === null) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    dragOverIndex = index;
+  }
+
+  function onDrop(event: DragEvent, index: number) {
+    event.preventDefault();
+    if (draggingIndex === null) {
+      resetDrag();
+      return;
+    }
+    const from = draggingIndex;
+    resetDrag();
+    if (from === index) return;
+
+    const buttons = [...config.buttons];
+    const [moved] = buttons.splice(from, 1);
+    buttons.splice(index, 0, moved);
+    scheduleSave({ ...config, buttons });
+  }
+
+  function resetDrag() {
+    draggingIndex = null;
+    dragOverIndex = null;
   }
 
   const unusedTransforms = $derived(
@@ -152,6 +228,7 @@
       name: newName.trim() || source.name,
       transform: source.transform,
       description: newDescription.trim(),
+      visible: true,
     };
     scheduleSave({ ...config, buttons: [...config.buttons, button] });
     newName = "";
@@ -170,6 +247,23 @@
   // ---------- 外观 / 通用 ----------
   function updateAppearance(patch: Partial<AppConfig>) {
     scheduleSave({ ...config, ...patch });
+  }
+
+  function selectPreset(color: { name: string; light: string; dark: string }) {
+    scheduleSave({
+      ...config,
+      backgroundColor: color.light,
+      backgroundColorDark: color.dark,
+    });
+  }
+
+  function onCustomColorChange(event: Event) {
+    const value = (event.currentTarget as HTMLInputElement).value;
+    scheduleSave({
+      ...config,
+      backgroundColor: value,
+      backgroundColorDark: darkenHex(value),
+    });
   }
 
   function flatIndexOf(buttons: TransformButton[], target: TransformButton): number {
@@ -216,7 +310,7 @@
 
   <section class="settings-section">
     <h2>按钮管理</h2>
-    <p class="hint">按行分组展示，可增删、上下移动（支持跨行）、修改名称与说明；每行最多 30 个。</p>
+    <p class="hint">按住每项左侧拖拽手柄可跨行排序；可增删、显示/隐藏、修改名称与说明；每行最多 30 个。</p>
 
     <div class="field-row">
       <label for="rows">行数</label>
@@ -233,10 +327,30 @@
     {#each groupedRows(config.buttons, config.rows) as row, rowIndex (rowIndex)}
       <div class="row-block">
         <h3>第 {rowIndex + 1} 行（{row.length} 个）</h3>
-        <div class="button-list">
+        <div class="button-list" role="list">
           {#each row as button (button.id)}
             {@const index = flatIndexOf(config.buttons, button)}
-            <div class="button-list-item">
+            <div
+              class="button-list-item"
+              role="listitem"
+              class:is-hidden={!button.visible}
+              class:is-dragging={draggingIndex === index}
+              class:drag-over={dragOverIndex === index}
+              ondragover={(event) => onDragOver(event, index)}
+              ondrop={(event) => onDrop(event, index)}
+            >
+              <span
+                class="drag-handle"
+                draggable={true}
+                role="button"
+                tabindex="0"
+                aria-label="拖拽排序"
+                title="拖拽排序"
+                ondragstart={(event) => onDragStart(event, index)}
+                ondragend={resetDrag}
+              >
+                ⠿
+              </span>
               <span class="index">{index + 1}</span>
               <div class="button-fields">
                 <input
@@ -244,48 +358,31 @@
                   value={button.name}
                   maxlength="8"
                   placeholder="名称（≤8 字）"
-                  onchange={(e) => {
-                    const name = (e.currentTarget as HTMLInputElement).value.trim();
-                    if (!name) return;
-                    const buttons = config.buttons.map((item, i) =>
-                      i === index ? { ...item, name } : item,
-                    );
-                    scheduleSave({ ...config, buttons });
-                  }}
+                  onchange={(e) =>
+                    updateButtonName(index, (e.currentTarget as HTMLInputElement).value)}
                 />
                 <input
                   type="text"
                   value={button.description}
                   maxlength="60"
                   placeholder="说明（选填）"
-                  onchange={(e) => {
-                    const description = (e.currentTarget as HTMLInputElement).value.trim();
-                    const buttons = config.buttons.map((item, i) =>
-                      i === index ? { ...item, description } : item,
-                    );
-                    scheduleSave({ ...config, buttons });
-                  }}
+                  onchange={(e) =>
+                    updateButtonDescription(
+                      index,
+                      (e.currentTarget as HTMLInputElement).value,
+                    )}
                 />
               </div>
               <code>{button.transform}</code>
-              <button
-                type="button"
-                class="icon-button"
-                title="上移"
-                disabled={index === 0}
-                onclick={() => moveButton(index, index - 1)}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                class="icon-button"
-                title="下移"
-                disabled={index === config.buttons.length - 1}
-                onclick={() => moveButton(index, index + 1)}
-              >
-                ↓
-              </button>
+              <label class="visibility-toggle" title="显示/隐藏">
+                <input
+                  type="checkbox"
+                  checked={button.visible}
+                  onchange={(e) =>
+                    updateButtonVisible(index, (e.currentTarget as HTMLInputElement).checked)}
+                />
+                <span>显示</span>
+              </label>
               <button
                 type="button"
                 class="icon-button danger"
@@ -408,6 +505,39 @@
         </select>
       </div>
     </div>
+
+    <div class="color-section">
+      <div class="color-section-title">背景颜色</div>
+      <div class="color-presets">
+        {#each MACARON_COLORS as color (color.name)}
+          <button
+            type="button"
+            class="color-swatch"
+            class:selected={config.backgroundColor.toUpperCase() === color.light}
+            title={color.name}
+            style:background={color.light}
+            onclick={() => selectPreset(color)}
+          >
+            {color.name}
+          </button>
+        {/each}
+      </div>
+      <div class="custom-color-row">
+        <label for="custom-color">自定义颜色</label>
+        <input
+          id="custom-color"
+          type="color"
+          value={config.backgroundColor}
+          oninput={onCustomColorChange}
+        />
+        <span class="custom-preview">
+          <span class="swatch-mini" style:background={config.backgroundColor}></span>
+          浅色
+          <span class="swatch-mini" style:background={config.backgroundColorDark}></span>
+          深色
+        </span>
+      </div>
+    </div>
   </section>
 
   <section class="settings-section">
@@ -455,7 +585,7 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background: var(--bar-bg);
+    background: var(--settings-bg);
     color: var(--text);
     overflow-y: auto;
     user-select: text;
@@ -494,6 +624,7 @@
     padding: 6px 14px;
     border-radius: var(--radius);
     background: var(--button-bg);
+    border: 1px solid var(--glass-border);
   }
 
   .ghost-button:hover {
@@ -579,22 +710,56 @@
 
   .button-list {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 6px;
+    max-height: 360px;
+    overflow-y: auto;
   }
 
   .button-list-item {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: 5px 8px;
     border: 1px solid var(--bar-border);
     border-radius: 6px;
     font-size: 13px;
+    transition:
+      opacity 0.12s ease,
+      border-color 0.12s ease,
+      background 0.12s ease;
+  }
+
+  .button-list-item.is-hidden {
+    opacity: 0.55;
+  }
+
+  .button-list-item.is-dragging {
+    opacity: 0.4;
+  }
+
+  .button-list-item.drag-over {
+    border-color: var(--accent);
+    background: var(--button-bg-active);
+  }
+
+  .drag-handle {
+    width: 22px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+    cursor: grab;
+    font-size: 14px;
+    user-select: none;
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
   }
 
   .button-list-item .index {
-    width: 18px;
+    width: 20px;
     color: var(--text-muted);
     font-size: 12px;
     flex: none;
@@ -602,12 +767,12 @@
 
   .button-fields {
     display: flex;
-    gap: 4px;
-    flex: 1;
-    min-width: 0;
+    gap: 8px;
+    flex: none;
   }
 
   .button-fields input {
+    width: 150px;
     padding: 4px 6px;
     border: 1px solid var(--bar-border);
     border-radius: 4px;
@@ -616,25 +781,30 @@
     font-size: 13px;
   }
 
-  .button-fields input:first-child {
-    width: 90px;
-    flex: none;
-  }
-
-  .button-fields input:last-child {
+  .button-list-item code {
     flex: 1;
     min-width: 0;
-  }
-
-  .button-list-item code {
+    margin-left: 12px;
+    padding-left: 12px;
+    border-left: 1px solid var(--bar-border);
     font-size: 11px;
     color: var(--text-muted);
-    flex: none;
-    max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    margin-left: auto;
+  }
+
+  .visibility-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .visibility-toggle input {
+    accent-color: var(--accent);
   }
 
   .icon-button {
@@ -689,6 +859,73 @@
     min-width: 0;
   }
 
+  .color-section {
+    margin-top: 12px;
+  }
+
+  .color-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .color-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .color-swatch {
+    min-width: 72px;
+    padding: 7px 10px;
+    border: 1px solid var(--bar-border);
+    border-radius: 8px;
+    color: #1f2937;
+    font-size: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  .color-swatch.selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .custom-color-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .custom-color-row label {
+    font-size: 13px;
+  }
+
+  .custom-color-row input[type="color"] {
+    width: 44px;
+    height: 32px;
+    padding: 2px;
+    border: 1px solid var(--bar-border);
+    border-radius: 6px;
+    background: var(--button-bg);
+  }
+
+  .custom-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .swatch-mini {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    border: 1px solid var(--bar-border);
+    border-radius: 4px;
+  }
+
   .toggle-row {
     display: flex;
     align-items: center;
@@ -699,6 +936,10 @@
   .toggle-row label {
     flex: 1;
     font-size: 13px;
+  }
+
+  .toggle-row input {
+    accent-color: var(--accent);
   }
 
   .settings-footer {

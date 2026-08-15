@@ -13,6 +13,10 @@ export async function applyNoActivate(): Promise<void> {
   await invoke("apply_no_activate");
 }
 
+export async function saveFloatBarPosition(x: number, y: number): Promise<void> {
+  await invoke("update_float_bar_position", { x, y });
+}
+
 export async function showSettingsWindow(): Promise<void> {
   await invoke("open_settings");
 }

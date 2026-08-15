@@ -1,4 +1,4 @@
-use crate::config::{self, AppConfig, ConfigState};
+use crate::config::{self, AppConfig, ConfigState, WindowPosition};
 use crate::{hotkey, selection, transform, FLOAT_BAR_LABEL};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -58,7 +58,7 @@ pub fn open_settings(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// 悬浮条加载完成后调用：设置不抢焦点，并定位到屏幕右上角。
+/// 悬浮条加载完成后调用：设置不抢焦点（位置记忆由前端负责）。
 #[tauri::command]
 pub fn apply_no_activate(app: AppHandle) -> Result<(), String> {
     let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) else {
@@ -68,6 +68,18 @@ pub fn apply_no_activate(app: AppHandle) -> Result<(), String> {
     crate::apply_no_activate(&win).map_err(|e| e.to_string())?;
     #[cfg(not(target_os = "windows"))]
     let _ = &win;
+    Ok(())
+}
+
+/// 悬浮条拖动结束后保存位置，不触发 config-changed 以避免位置回跳。
+#[tauri::command]
+pub fn update_float_bar_position(app: AppHandle, x: i32, y: i32) -> Result<(), String> {
+    let state = app.state::<ConfigState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let mut next = guard.clone();
+    next.position = Some(WindowPosition { x, y });
+    config::save_config(&next)?;
+    *guard = next;
     Ok(())
 }
 

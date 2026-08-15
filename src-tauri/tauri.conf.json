@@ -17,7 +17,7 @@
         "url": "index.html?window=float-bar",
         "width": 760,
         "height": 92,
-        "minWidth": 300,
+        "minWidth": 120,
         "minHeight": 48,
         "resizable": false,
         "decorations": false,

@@ -8,6 +8,9 @@ use std::{
 /// 全局配置状态，所有命令共享。
 pub struct ConfigState(pub Mutex<AppConfig>);
 
+const DEFAULT_BACKGROUND_COLOR: &str = "#DCEBFA";
+const DEFAULT_BACKGROUND_COLOR_DARK: &str = "#27384A";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AppConfig {
@@ -19,6 +22,9 @@ pub struct AppConfig {
     pub font_size: u32,
     pub opacity: u32,
     pub theme: String,
+    pub background_color: String,
+    pub background_color_dark: String,
+    pub position: Option<WindowPosition>,
     pub auto_start: bool,
     pub restore_clipboard: bool,
     pub replace_delay_ms: u32,
@@ -40,6 +46,15 @@ pub struct TransformButton {
     pub transform: String,
     #[serde(default)]
     pub description: String,
+    #[serde(default = "default_true")]
+    pub visible: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowPosition {
+    pub x: i32,
+    pub y: i32,
 }
 
 fn button(id: &str, name: &str, transform: &str, description: &str) -> TransformButton {
@@ -48,7 +63,12 @@ fn button(id: &str, name: &str, transform: &str, description: &str) -> Transform
         name: name.to_string(),
         transform: transform.to_string(),
         description: description.to_string(),
+        visible: true,
     }
+}
+
+fn default_true() -> bool {
+    true
 }
 
 pub fn default_config() -> AppConfig {
@@ -61,6 +81,9 @@ pub fn default_config() -> AppConfig {
         font_size: 13,
         opacity: 100,
         theme: "system".to_string(),
+        background_color: DEFAULT_BACKGROUND_COLOR.to_string(),
+        background_color_dark: DEFAULT_BACKGROUND_COLOR_DARK.to_string(),
+        position: None,
         auto_start: false,
         restore_clipboard: true,
         replace_delay_ms: 80,
@@ -71,113 +94,103 @@ pub fn default_config() -> AppConfig {
 /// 20 个内置转换按钮：顺序固定，id 与显示文字解耦（对应需求 4.3）。
 pub fn default_buttons() -> Vec<TransformButton> {
     vec![
-        button("upper", "全大写", "upper", "所有字母转为大写"),
-        button("lower", "全小写", "lower", "所有字母转为小写"),
+        button("upper", "AB", "upper", "所有字母转为大写"),
+        button("lower", "ab", "lower", "所有字母转为小写"),
         button(
             "capitalize-words",
-            "首字母大写",
+            "Ab",
             "capitalize-words",
             "每个单词首字母大写",
         ),
         button(
             "uncapitalize-words",
-            "首字母小写",
+            "aB",
             "uncapitalize-words",
             "每个单词首字母小写",
         ),
-        button(
-            "sentence-case",
-            "句子首字母大写",
-            "sentence-case",
-            "每个句子首字母大写",
-        ),
+        button("sentence-case", "Aa", "sentence-case", "每个句子首字母大写"),
         button(
             "space-to-underscore",
-            "空格→下划线",
+            "s_",
             "space-to-underscore",
             "空格替换为下划线",
         ),
         button(
             "to-camel",
-            "下划线&空格→驼峰",
+            "camel",
             "to-camel",
             "下划线或空格分词并转为驼峰",
         ),
         button(
             "camel-to-underscore",
-            "驼峰→下划线",
+            "c_",
             "camel-to-underscore",
             "驼峰分词并以下划线连接",
         ),
         button(
             "camel-to-space",
-            "驼峰→空格",
+            "c sp",
             "camel-to-space",
             "驼峰分词并以空格连接",
         ),
         button(
             "space-to-hyphen",
-            "空格→中横线",
+            "s-",
             "space-to-hyphen",
             "空格替换为中横线",
         ),
         button(
             "underscore-to-hyphen",
-            "下划线→中横线",
+            "_-",
             "underscore-to-hyphen",
             "下划线替换为中横线",
         ),
         button(
             "hyphen-to-underscore",
-            "中横线→下划线",
+            "-_",
             "hyphen-to-underscore",
             "中横线替换为下划线",
         ),
         button(
             "underscore-to-space",
-            "下划线→空格",
+            "_s",
             "underscore-to-space",
             "下划线替换为空格",
         ),
         button(
             "underscore-to-dot",
-            "下划线→小数点",
+            "_.",
             "underscore-to-dot",
             "下划线替换为小数点",
         ),
         button(
             "dot-to-underscore",
-            "小数点→下划线",
+            "._",
             "dot-to-underscore",
             "小数点替换为下划线",
         ),
         button(
             "space-to-newline",
-            "空格→换行",
+            "s↵",
             "space-to-newline",
             "空格替换为换行",
         ),
         button(
             "newline-to-space",
-            "换行→空格",
+            "↵s",
             "newline-to-space",
             "换行替换为空格",
         ),
         button(
             "remove-symbols",
-            "清除符号",
+            "NoSym",
             "remove-symbols",
-            "删除字母、数字、空白以外的字符",
+            "删除除 Unicode 字母、数字、空白外的所有字符",
         ),
-        button(
-            "remove-spaces",
-            "清除空格",
-            "remove-spaces",
-            "删除所有空格字符",
-        ),
+        button("remove-spaces", "NoSp", "remove-spaces", "删除所有空格字符"),
         button(
             "remove-newlines",
-            "清除换行",
+            "NoNl",
             "remove-newlines",
             "删除所有换行符",
         ),
@@ -255,11 +268,16 @@ pub fn normalize(config: &mut AppConfig) {
     config.button_width = config.button_width.clamp(40, 200);
     config.button_height = config.button_height.clamp(28, 80);
     config.font_size = config.font_size.clamp(10, 24);
-    config.opacity = config.opacity.clamp(0, 100);
+    config.opacity = config.opacity.clamp(20, 100);
     config.replace_delay_ms = config.replace_delay_ms.clamp(20, 1000);
     if !matches!(config.theme.as_str(), "system" | "light" | "dark") {
         config.theme = "system".to_string();
     }
+    normalize_color(&mut config.background_color, DEFAULT_BACKGROUND_COLOR);
+    normalize_color(
+        &mut config.background_color_dark,
+        DEFAULT_BACKGROUND_COLOR_DARK,
+    );
 }
 
 /// 逻辑校验：行数/按钮数量/按钮内容/快捷键格式。
@@ -273,6 +291,15 @@ pub fn validate(config: &AppConfig) -> Result<(), String> {
     if config.buttons.len() > (config.rows as usize) * 30 {
         return Err("每行最多 30 个按钮".to_string());
     }
+    if !(20..=100).contains(&config.opacity) {
+        return Err("背景不透明度需在 20~100 之间".to_string());
+    }
+    if !is_hex_color(&config.background_color) {
+        return Err("浅色背景颜色格式无效".to_string());
+    }
+    if !is_hex_color(&config.background_color_dark) {
+        return Err("深色背景颜色格式无效".to_string());
+    }
     for item in &config.buttons {
         if item.name.trim().is_empty() {
             return Err("按钮名称不能为空".to_string());
@@ -285,6 +312,17 @@ pub fn validate(config: &AppConfig) -> Result<(), String> {
         return Err("快捷键需包含至少一个修饰键（Ctrl/Alt/Shift/Cmd）".to_string());
     }
     Ok(())
+}
+
+fn is_hex_color(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() == 7 && bytes[0] == b'#' && bytes[1..].iter().all(|b| b.is_ascii_hexdigit())
+}
+
+fn normalize_color(value: &mut String, fallback: &str) {
+    if !is_hex_color(value) {
+        *value = fallback.to_string();
+    }
 }
 
 /// 配置文件损坏时重命名备份，保留现场供排查（不含任何用户文本）。

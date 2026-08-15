@@ -1,27 +1,34 @@
 :root {
   color-scheme: light dark;
-  --bar-bg: rgba(255, 255, 255, 0.96);
+  --radius: 8px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --settings-bg: #f9fafb;
   --bar-border: rgba(0, 0, 0, 0.1);
-  --button-bg: #f3f4f6;
-  --button-bg-hover: #e5e7eb;
-  --button-bg-active: #dbeafe;
+  --button-bg: rgba(255, 255, 255, 0.52);
+  --button-bg-hover: rgba(255, 255, 255, 0.82);
+  --button-bg-active: rgba(37, 99, 235, 0.18);
+  --glass-border: rgba(255, 255, 255, 0.58);
   --text: #1f2937;
   --text-muted: #6b7280;
   --accent: #2563eb;
   --danger: #dc2626;
-  --radius: 8px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bar-bg: rgba(31, 41, 55, 0.96);
-    --bar-border: rgba(255, 255, 255, 0.12);
-    --button-bg: #374151;
-    --button-bg-hover: #4b5563;
-    --button-bg-active: #1e40af;
-    --text: #f3f4f6;
-    --text-muted: #9ca3af;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --settings-bg: #1f2430;
+  --bar-border: rgba(255, 255, 255, 0.14);
+  --button-bg: rgba(255, 255, 255, 0.08);
+  --button-bg-hover: rgba(255, 255, 255, 0.16);
+  --button-bg-active: rgba(59, 130, 246, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --text: #f3f4f6;
+  --text-muted: #9ca3af;
+  --accent: #3b82f6;
+  --danger: #f87171;
 }
 
 * {
@@ -69,7 +76,7 @@ button:disabled {
   display: flex;
   align-items: stretch;
   padding: 6px;
-  background: var(--bar-bg);
+  background: var(--bar-bg, rgba(255, 255, 255, 0.96));
   border: 1px solid var(--bar-border);
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
@@ -108,21 +115,31 @@ button:disabled {
   padding: 0 8px;
   border-radius: var(--radius);
   background: var(--button-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 2px 7px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   font-size: var(--font-size);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   transition:
     background 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
     transform 0.08s ease;
 }
 
 .transform-button:hover {
   background: var(--button-bg-hover);
+  border-color: var(--button-bg-hover);
 }
 
 .transform-button.is-active {
   background: var(--button-bg-active);
+  border-color: var(--accent);
   transform: scale(0.96);
 }
 
@@ -174,126 +191,4 @@ button:disabled {
 
 .button-tooltip.above {
   transform: translate(-50%, -100%);
-}
-
-/* ---------- 设置页 ---------- */
-.settings-page {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bar-bg);
-  color: var(--text);
-  overflow-y: auto;
-  user-select: text;
-}
-
-.settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--bar-border);
-  user-select: none;
-}
-
-.settings-header h1 {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.ghost-button {
-  padding: 6px 14px;
-  border-radius: var(--radius);
-  background: var(--button-bg);
-}
-
-.ghost-button:hover {
-  background: var(--button-bg-hover);
-}
-
-.settings-section {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--bar-border);
-}
-
-.settings-section h2 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-}
-
-.error-text {
-  padding: 10px 24px;
-  color: var(--danger);
-  font-size: 13px;
-}
-
-.field-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.field-row label {
-  flex: 1;
-  font-size: 13px;
-}
-
-.field-row input {
-  width: 220px;
-  padding: 6px 10px;
-  border: 1px solid var(--bar-border);
-  border-radius: 6px;
-  background: var(--button-bg);
-  color: var(--text);
-  font-size: 13px;
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 24px;
-}
-
-.button-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.button-list-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--bar-border);
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-.button-list-item .index {
-  width: 20px;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.button-list-item code {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.settings-footer {
-  padding: 14px 24px;
-  color: var(--text-muted);
-  font-size: 12px;
 }

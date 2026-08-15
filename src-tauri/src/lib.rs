@@ -78,6 +78,7 @@ pub fn run() {
             commands::get_config,
             commands::save_config,
             commands::apply_no_activate,
+            commands::update_float_bar_position,
             commands::open_settings,
             commands::execute_button
         ])

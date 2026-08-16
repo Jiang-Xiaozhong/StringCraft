@@ -10,7 +10,6 @@ pub struct ConfigState(pub Mutex<AppConfig>);
 
 const DEFAULT_BACKGROUND_COLOR: &str = "#DCEBFA";
 const DEFAULT_BACKGROUND_COLOR_DARK: &str = "#27384A";
-const TOOLBAR_CHROME_WIDTH: u32 = 56;
 const BUTTON_GAP: u32 = 4;
 const ACTION_GAP: u32 = 4;
 const BODY_GAP: u32 = 6;
@@ -109,9 +108,10 @@ pub fn default_config() -> AppConfig {
     }
 }
 
-/// 默认工具条宽度：恰好容纳 10 个默认宽度按钮（72px）。
+/// 默认工具条宽度：恰好容纳 10 个默认宽度按钮 + 横排的设置/隐藏按钮。
 fn default_toolbar_width() -> u32 {
-    TOOLBAR_CHROME_WIDTH + 10 * 72 + 9 * BUTTON_GAP
+    let action_width_horizontal = 2 * 32 + ACTION_GAP;
+    BAR_PADDING_TOTAL + action_width_horizontal + BODY_GAP + BAR_BORDER + 10 * 72 + 9 * BUTTON_GAP
 }
 
 /// 工具条最小宽度：至少容纳 1 个按钮和设置按钮。
@@ -124,27 +124,7 @@ fn min_toolbar_width(button_width: u32, button_height: u32) -> u32 {
 /// 20 个内置转换按钮：顺序固定，id 与显示文字解耦（对应需求 4.3）。
 pub fn default_buttons() -> Vec<TransformButton> {
     let mut buttons = vec![
-        button("upper", "AB", "upper", "所有字母转为大写"),
-        button("lower", "ab", "lower", "所有字母转为小写"),
-        button(
-            "capitalize-words",
-            "Ab",
-            "capitalize-words",
-            "每个单词首字母大写，其余小写",
-        ),
-        button(
-            "uncapitalize-words",
-            "aB",
-            "uncapitalize-words",
-            "每个单词首字母小写",
-        ),
-        button("sentence-case", "Aa", "sentence-case", "每个句子首字母大写"),
-        button(
-            "space-to-underscore",
-            "s_",
-            "space-to-underscore",
-            "空格替换为下划线",
-        ),
+        button("json-format", "JSON", "json-format", "JSON 格式化"),
         button(
             "to-camel",
             "camel",
@@ -164,40 +144,24 @@ pub fn default_buttons() -> Vec<TransformButton> {
             "驼峰分词并以空格连接",
         ),
         button(
-            "space-to-hyphen",
-            "s-",
-            "space-to-hyphen",
-            "空格替换为中横线",
+            "uncapitalize-words",
+            "aB",
+            "uncapitalize-words",
+            "每个单词首字母小写",
+        ),
+        button("upper", "AB", "upper", "所有字母转为大写"),
+        button("lower", "ab", "lower", "所有字母转为小写"),
+        button(
+            "remove-symbols",
+            "NoSym",
+            "remove-symbols",
+            "删除除 Unicode 字母、数字、空白外的所有字符",
         ),
         button(
-            "underscore-to-hyphen",
-            "_-",
-            "underscore-to-hyphen",
-            "下划线替换为中横线",
-        ),
-        button(
-            "hyphen-to-underscore",
-            "-_",
-            "hyphen-to-underscore",
-            "中横线替换为下划线",
-        ),
-        button(
-            "underscore-to-space",
-            "_s",
-            "underscore-to-space",
-            "下划线替换为空格",
-        ),
-        button(
-            "underscore-to-dot",
-            "_.",
-            "underscore-to-dot",
-            "下划线替换为小数点",
-        ),
-        button(
-            "dot-to-underscore",
-            "._",
-            "dot-to-underscore",
-            "小数点替换为下划线",
+            "space-to-underscore",
+            "s_",
+            "space-to-underscore",
+            "空格替换为下划线",
         ),
         button(
             "space-to-newline",
@@ -206,16 +170,22 @@ pub fn default_buttons() -> Vec<TransformButton> {
             "空格替换为换行",
         ),
         button(
+            "space-to-hyphen",
+            "s-",
+            "space-to-hyphen",
+            "空格替换为中横线",
+        ),
+        button(
+            "underscore-to-space",
+            "_s",
+            "underscore-to-space",
+            "下划线替换为空格",
+        ),
+        button(
             "newline-to-space",
             "↵s",
             "newline-to-space",
             "换行替换为空格",
-        ),
-        button(
-            "remove-symbols",
-            "NoSym",
-            "remove-symbols",
-            "删除除 Unicode 字母、数字、空白外的所有字符",
         ),
         button("remove-spaces", "NoSp", "remove-spaces", "删除所有空格字符"),
         button(
@@ -224,7 +194,37 @@ pub fn default_buttons() -> Vec<TransformButton> {
             "remove-newlines",
             "删除所有换行符",
         ),
-        button("json-format", "JSON", "json-format", "JSON 格式化"),
+        button(
+            "underscore-to-hyphen",
+            "_-",
+            "underscore-to-hyphen",
+            "下划线替换为中横线",
+        ),
+        button(
+            "underscore-to-dot",
+            "_.",
+            "underscore-to-dot",
+            "下划线替换为小数点",
+        ),
+        button(
+            "hyphen-to-underscore",
+            "-_",
+            "hyphen-to-underscore",
+            "中横线替换为下划线",
+        ),
+        button(
+            "dot-to-underscore",
+            "._",
+            "dot-to-underscore",
+            "小数点替换为下划线",
+        ),
+        button("sentence-case", "Aa", "sentence-case", "每个句子首字母大写"),
+        button(
+            "capitalize-words",
+            "Ab",
+            "capitalize-words",
+            "每个单词首字母大写，其余小写",
+        ),
         button(
             "number-to-rmb",
             "NumRMB",
@@ -239,19 +239,19 @@ pub fn default_buttons() -> Vec<TransformButton> {
         ),
     ];
 
-    // 23 个默认按钮全部保留在配置中；10 个常用按钮默认显示，其余默认隐藏。
+    // 23 个默认按钮全部保留在配置中；前 10 个默认显示，其余默认隐藏。
     for id in [
         "space-to-hyphen",
-        "underscore-to-hyphen",
-        "hyphen-to-underscore",
         "underscore-to-space",
-        "underscore-to-dot",
-        "dot-to-underscore",
-        "space-to-newline",
         "newline-to-space",
         "remove-spaces",
         "remove-newlines",
-        "json-format",
+        "underscore-to-hyphen",
+        "underscore-to-dot",
+        "hyphen-to-underscore",
+        "dot-to-underscore",
+        "sentence-case",
+        "capitalize-words",
         "number-to-rmb",
         "rmb-to-number",
     ] {

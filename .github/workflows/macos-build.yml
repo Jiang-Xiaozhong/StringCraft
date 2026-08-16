@@ -26,6 +26,9 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
+      - name: Add Apple Silicon target
+        run: rustup target add aarch64-apple-darwin
+
       - name: Install frontend dependencies
         run: npm ci
 
@@ -45,12 +48,12 @@ jobs:
         run: cargo test
 
       - name: Build macOS app (debug)
-        run: npm run tauri build -- --debug
+        run: npm run tauri build -- --debug --target aarch64-apple-darwin
 
       - name: Upload debug artifacts
         uses: actions/upload-artifact@v5
         with:
           name: stringcraft-macos-debug
           path: |
-            src-tauri/target/debug/bundle/**/*.app
-            src-tauri/target/debug/bundle/**/*.dmg
+            src-tauri/target/**/bundle/**/*.app
+            src-tauri/target/**/bundle/**/*.dmg

@@ -24,7 +24,7 @@
 - [ ] 开机自启（LaunchAgent）在 macOS 上验证
 - [ ] 设置窗口/悬浮条窗口在 macOS 上的显示、隐藏、关闭行为验证
 - [ ] 中英文切换、赞助区在 macOS 上验证
-- [ ] 双架构（Intel + Apple Silicon）：安装 `x86_64-apple-darwin` 与 `aarch64-apple-darwin` 目标并合并 Universal 包
+- [ ] Apple Silicon（`aarch64-apple-darwin`）构建与安装验证
 - [ ] 签名与公证：配置 Apple Developer 账号后执行 `codesign`、`notarytool`、`stapler`
 - [ ] macOS 回归清单（参考 `docs/测试清单.md`，在 macOS 上执行）
 

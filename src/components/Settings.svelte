@@ -13,8 +13,8 @@
   let status: string | null = $state(null);
   let recording = $state(false);
   let newTransformId = $state(DEFAULT_BUTTONS[0].transform);
-  let newName = $state("");
-  let newDescription = $state("");
+  let newName = $state(DEFAULT_BUTTONS[0].name);
+  let newDescription = $state(DEFAULT_BUTTONS[0].description);
   let systemDark = $state(false);
   let draggingIndex: number | null = $state(null);
   let dragOverIndex: number | null = $state(null);
@@ -263,6 +263,16 @@
     if (nextUnused) newTransformId = nextUnused.transform;
   }
 
+  function onAddTransformChange(event: Event) {
+    const id = (event.currentTarget as HTMLSelectElement).value;
+    newTransformId = id;
+    const source = DEFAULT_BUTTONS.find((item) => item.transform === id);
+    if (source) {
+      newName = source.name;
+      newDescription = source.description;
+    }
+  }
+
   function restoreDefaultButtons() {
     scheduleSave({ ...config, buttons: DEFAULT_BUTTONS.map((b) => ({ ...b })) });
   }
@@ -445,7 +455,8 @@
 
     <div class="add-row">
       <select
-        bind:value={newTransformId}
+        value={newTransformId}
+        onchange={onAddTransformChange}
         disabled={unusedTransforms.length === 0}
       >
         {#each unusedTransforms as source (source.transform)}

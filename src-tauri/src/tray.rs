@@ -1,7 +1,7 @@
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::TrayIconBuilder,
     AppHandle, Manager,
 };
 
@@ -48,6 +48,7 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
         .on_tray_icon_event(|tray, event| {
             #[cfg(target_os = "windows")]
             {
+                use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
                 if let TrayIconEvent::Click {
                     button: MouseButton::Left,
                     button_state: MouseButtonState::Up,

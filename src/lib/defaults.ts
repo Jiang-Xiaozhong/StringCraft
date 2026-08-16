@@ -1,0 +1,84 @@
+import type { AppConfig, TransformButton } from "./types";
+import type { Language } from "./i18n";
+
+const DESCRIPTION_EN: Record<string, string> = {
+  "json-format": "Format JSON",
+  "to-camel": "Convert underscore/space separated words to camelCase",
+  "camel-to-underscore": "Split camelCase and join with underscores",
+  "camel-to-space": "Split camelCase and join with spaces",
+  "uncapitalize-words": "Lowercase the first letter of each word",
+  upper: "Convert all letters to uppercase",
+  lower: "Convert all letters to lowercase",
+  "remove-symbols": "Remove all characters except Unicode letters, digits and whitespace",
+  "space-to-underscore": "Replace spaces with underscores",
+  "space-to-newline": "Replace spaces with newlines",
+  "space-to-hyphen": "Replace spaces with hyphens",
+  "underscore-to-space": "Replace underscores with spaces",
+  "newline-to-space": "Replace newlines with spaces",
+  "remove-spaces": "Remove all space characters",
+  "remove-newlines": "Remove all newlines",
+  "underscore-to-hyphen": "Replace underscores with hyphens",
+  "underscore-to-dot": "Replace underscores with dots",
+  "hyphen-to-underscore": "Replace hyphens with underscores",
+  "dot-to-underscore": "Replace dots with underscores",
+  "sentence-case": "Uppercase the first letter of each sentence",
+  "capitalize-words": "Uppercase the first letter of each word, lowercase the rest",
+  "number-to-rmb": "Convert a number to RMB uppercase",
+  "rmb-to-number": "Convert RMB uppercase to a number",
+};
+
+export function getDefaultButtons(lang: Language): TransformButton[] {
+  return DEFAULT_BUTTONS.map((button) => ({
+    ...button,
+    description:
+      lang === "en-US" ? (DESCRIPTION_EN[button.transform] ?? button.description) : button.description,
+  }));
+}
+
+export const DEFAULT_BUTTONS: TransformButton[] = [
+  { id: "json-format", name: "JSON", transform: "json-format", description: "JSON 格式化", visible: true },
+  { id: "to-camel", name: "camel", transform: "to-camel", description: "下划线或空格分词并转为驼峰", visible: true },
+  { id: "camel-to-underscore", name: "c_", transform: "camel-to-underscore", description: "驼峰分词并以下划线连接", visible: true },
+  { id: "camel-to-space", name: "c sp", transform: "camel-to-space", description: "驼峰分词并以空格连接", visible: true },
+  { id: "uncapitalize-words", name: "aB", transform: "uncapitalize-words", description: "每个单词首字母小写", visible: true },
+  { id: "upper", name: "AB", transform: "upper", description: "所有字母转为大写", visible: true },
+  { id: "lower", name: "ab", transform: "lower", description: "所有字母转为小写", visible: true },
+  { id: "remove-symbols", name: "NoSym", transform: "remove-symbols", description: "删除除 Unicode 字母、数字、空白外的所有字符", visible: true },
+  { id: "space-to-underscore", name: "s_", transform: "space-to-underscore", description: "空格替换为下划线", visible: true },
+  { id: "space-to-newline", name: "s↵", transform: "space-to-newline", description: "空格替换为换行", visible: true },
+  { id: "space-to-hyphen", name: "s-", transform: "space-to-hyphen", description: "空格替换为中横线", visible: false },
+  { id: "underscore-to-space", name: "_s", transform: "underscore-to-space", description: "下划线替换为空格", visible: false },
+  { id: "newline-to-space", name: "↵s", transform: "newline-to-space", description: "换行替换为空格", visible: false },
+  { id: "remove-spaces", name: "NoSp", transform: "remove-spaces", description: "删除所有空格字符", visible: false },
+  { id: "remove-newlines", name: "NoNl", transform: "remove-newlines", description: "删除所有换行符", visible: false },
+  { id: "underscore-to-hyphen", name: "_-", transform: "underscore-to-hyphen", description: "下划线替换为中横线", visible: false },
+  { id: "underscore-to-dot", name: "_.", transform: "underscore-to-dot", description: "下划线替换为小数点", visible: false },
+  { id: "hyphen-to-underscore", name: "-_", transform: "hyphen-to-underscore", description: "中横线替换为下划线", visible: false },
+  { id: "dot-to-underscore", name: "._", transform: "dot-to-underscore", description: "小数点替换为下划线", visible: false },
+  { id: "sentence-case", name: "Aa", transform: "sentence-case", description: "每个句子首字母大写", visible: false },
+  { id: "capitalize-words", name: "Ab", transform: "capitalize-words", description: "每个单词首字母大写，其余小写", visible: false },
+  { id: "number-to-rmb", name: "NumRMB", transform: "number-to-rmb", description: "数字转人民币大写", visible: false },
+  { id: "rmb-to-number", name: "RMBNum", transform: "rmb-to-number", description: "人民币大写转数字", visible: false },
+];
+
+export const DEFAULT_CONFIG: AppConfig = {
+  version: 1,
+  hotkey: "Ctrl+Alt+Space",
+  toolbarWidth: 720,
+  buttonWidth: 60,
+  buttonHeight: 30,
+  fontSize: 12,
+  opacity: 100,
+  theme: "system",
+  backgroundColor: "#DCEBFA",
+  backgroundColorDark: "#27384A",
+  autoStart: false,
+  restoreClipboard: true,
+  replaceDelayMs: 80,
+  debugLog: false,
+  language: "zh-CN",
+  autoCheckUpdate: true,
+  autoUpdate: false,
+  showDonation: true,
+  buttons: DEFAULT_BUTTONS,
+};

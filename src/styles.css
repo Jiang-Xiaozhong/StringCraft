@@ -1,0 +1,233 @@
+:root {
+  color-scheme: light dark;
+  --radius: 8px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --settings-bg: #f9fafb;
+  --control-bg: #ffffff;
+  --bar-border: rgba(0, 0, 0, 0.1);
+  --button-bg: rgba(255, 255, 255, 0.52);
+  --button-bg-hover: rgba(255, 255, 255, 0.82);
+  --button-bg-active: rgba(37, 99, 235, 0.18);
+  --glass-border: rgba(255, 255, 255, 0.58);
+  --text: #1f2937;
+  --text-muted: #6b7280;
+  --accent: #2563eb;
+  --danger: #dc2626;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --settings-bg: #1f2430;
+  --control-bg: #2b3242;
+  --bar-border: rgba(255, 255, 255, 0.14);
+  --button-bg: rgba(255, 255, 255, 0.08);
+  --button-bg-hover: rgba(255, 255, 255, 0.16);
+  --button-bg-active: rgba(59, 130, 246, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --text: #f3f4f6;
+  --text-muted: #9ca3af;
+  --accent: #3b82f6;
+  --danger: #f87171;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family:
+    system-ui,
+    "Segoe UI",
+    "Microsoft YaHei",
+    "PingFang SC",
+    sans-serif;
+  color: var(--text);
+  background: transparent;
+  user-select: none;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ---------- 悬浮条 ---------- */
+.float-bar {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: stretch;
+  padding: 6px;
+  background: var(--bar-bg, rgba(255, 255, 255, 0.96));
+  border: 1px solid var(--bar-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(12px);
+  user-select: none;
+}
+
+.bar-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.button-rows {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.transform-button {
+  flex: 0 0 var(--button-width);
+  width: var(--button-width);
+  min-width: 0;
+  max-width: var(--button-width);
+  height: var(--button-height);
+  padding: 0 8px;
+  border-radius: var(--radius);
+  background: var(--button-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 2px 7px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: var(--font-size);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.08s ease;
+}
+
+.transform-button:hover {
+  background: var(--button-bg-hover);
+  border-color: var(--button-bg-hover);
+}
+
+.transform-button.is-active {
+  background: var(--button-bg-active);
+  border-color: var(--accent);
+  transform: scale(0.96);
+}
+
+.settings-button {
+  width: var(--action-size);
+  height: var(--action-size);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  flex: none;
+}
+
+.settings-button:hover {
+  background: var(--button-bg-hover);
+  color: var(--text);
+}
+
+.bar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+}
+
+.bar-actions svg {
+  width: 50%;
+  height: 50%;
+}
+
+.bar-actions.is-horizontal {
+  flex-direction: row;
+}
+
+.hide-button {
+  width: var(--action-size);
+  height: var(--action-size);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  flex: none;
+}
+
+.hide-button:hover {
+  background: var(--button-bg-hover);
+  color: var(--text);
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 5;
+  touch-action: none;
+}
+
+.bubble {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #fff;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 10;
+}
+
+.button-tooltip {
+  position: fixed;
+  z-index: 20;
+  max-width: 260px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  transform: translate(-50%, 0);
+}
+
+.button-tooltip.above {
+  transform: translate(-50%, -100%);
+}

@@ -1,0 +1,30 @@
+[package]
+name = "stringcraft"
+version = "0.1.0"
+description = "StringCraft 字符串工坊"
+authors = ["Jiang Xiaozhong"]
+edition = "2021"
+
+[lib]
+name = "stringcraft_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+arboard = "3"
+dirs = "6"
+enigo = "0.6"
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-store = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+tauri-plugin-dialog = "2.7.2"
+ureq = "3.4.0"
+
+[target."cfg(windows)".dependencies]
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }

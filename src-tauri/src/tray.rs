@@ -2,14 +2,26 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    App,
+    App, Manager,
 };
 
 pub fn create_tray(app: &App) -> tauri::Result<()> {
-    let show = MenuItem::with_id(app, "show", "呼出悬浮条", true, None::<&str>)?;
-    let hide = MenuItem::with_id(app, "hide", "隐藏悬浮条", true, None::<&str>)?;
-    let settings = MenuItem::with_id(app, "settings", "打开设置", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+    let language = app
+        .state::<crate::config::ConfigState>()
+        .0
+        .lock()
+        .map(|config| config.language.clone())
+        .unwrap_or_else(|_| "zh-CN".to_string());
+    let (show_text, hide_text, settings_text, quit_text) = if language == "en-US" {
+        ("Show Float Bar", "Hide Float Bar", "Settings", "Quit")
+    } else {
+        ("呼出悬浮条", "隐藏悬浮条", "打开设置", "退出")
+    };
+
+    let show = MenuItem::with_id(app, "show", show_text, true, None::<&str>)?;
+    let hide = MenuItem::with_id(app, "hide", hide_text, true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", settings_text, true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", quit_text, true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &hide, &settings, &quit])?;
 
     let icon = Image::from_bytes(include_bytes!("../icons/32x32.png"))?;

@@ -2,9 +2,22 @@
   import { onDestroy, onMount } from "svelte";
   import { flip } from "svelte/animate";
   import { open, save } from "@tauri-apps/plugin-dialog";
+  import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { exportConfigTo, getConfig, importConfigFrom, saveConfig } from "../lib/api";
-  import { DEFAULT_BUTTONS, DEFAULT_CONFIG } from "../lib/defaults";
+  import {
+    checkForUpdate,
+    downloadUpdate,
+    exportConfigTo,
+    getConfig,
+    importConfigFrom,
+    installUpdate,
+    saveConfig,
+    type UpdateInfo,
+  } from "../lib/api";
+  import alipayImg from "../assets/alipay.jpg";
+  import wechatImg from "../assets/wechat.jpg";
+  import { DEFAULT_CONFIG, getDefaultButtons } from "../lib/defaults";
+  import { t } from "../lib/i18n";
   import { darkenHex, MACARON_COLORS, MORANDI_COLORS } from "../lib/theme";
   import type { AppConfig, TransformButton } from "../lib/types";
 
@@ -20,6 +33,9 @@
   let newCustomParam2 = $state("");
   let newCustomName = $state("");
   let newCustomDescription = $state("");
+  let checkingUpdate = $state(false);
+  let updateInfo: UpdateInfo | null = $state(null);
+  let updateReadyPath: string | null = $state(null);
   let systemDark = $state(false);
   let draggingIndex: number | null = $state(null);
   let dragOverIndex: number | null = $state(null);
@@ -28,13 +44,19 @@
   let dragPointerStartY = 0;
   let dragTargets: number[] = [];
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
+  let unlistenUpdateFound: (() => void) | undefined;
+  let unlistenUpdateReady: (() => void) | undefined;
 
   const CUSTOM_TYPES = [
-    { id: "append-suffix", name: "加后缀", paramLabel: "后缀文本" },
-    { id: "prepend-prefix", name: "加前缀", paramLabel: "前缀文本" },
-    { id: "replace-text", name: "文本替换", paramLabel: "被替换文本", param2Label: "替换为文本" },
-    { id: "remove-duplicate-lines", name: "去重复行", paramLabel: "" },
+    { id: "append-suffix", nameKey: "custom.appendSuffix", paramKey: "custom.suffixPlaceholder" },
+    { id: "prepend-prefix", nameKey: "custom.prependPrefix", paramKey: "custom.prefixPlaceholder" },
+    { id: "replace-text", nameKey: "custom.replaceText", paramKey: "custom.replaceFromPlaceholder", param2Key: "custom.replaceToPlaceholder" },
+    { id: "remove-duplicate-lines", nameKey: "custom.removeDuplicateLines", paramKey: "" },
   ];
+
+  function tt(key: string, vars?: Record<string, string>): string {
+    return t(config.language, key, vars);
+  }
 
   const win = getCurrentWindow();
   const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -60,11 +82,20 @@
     } catch (e) {
       loadError = String(e);
     }
+    unlistenUpdateFound = await listen("update-found", (event) => {
+      updateInfo = event.payload as UpdateInfo;
+    });
+    unlistenUpdateReady = await listen("update-ready", (event) => {
+      updateReadyPath = event.payload as string;
+      status = tt("settings.update.ready");
+    });
   });
 
   onDestroy(() => {
     media.removeEventListener("change", updateSystemDark);
     window.removeEventListener("keydown", onHotkeyKeydown);
+    unlistenUpdateFound?.();
+    unlistenUpdateReady?.();
     clearTimeout(saveTimer);
   });
 
@@ -120,7 +151,7 @@
   function startRecording() {
     if (recording) return;
     recording = true;
-    status = "请按下新的组合键（需包含 Ctrl/Alt/Shift）…";
+    status = tt("settings.hotkey.recording");
     window.addEventListener("keydown", onHotkeyKeydown);
   }
 
@@ -260,14 +291,14 @@
   }
 
   const unusedTransforms = $derived(
-    DEFAULT_BUTTONS.filter(
+    getDefaultButtons(config.language).filter(
       (source) => !config.buttons.some((item) => item.transform === source.transform),
     ),
   );
 
   function applyTransformDefaults(id: string) {
     newTransformId = id;
-    const source = DEFAULT_BUTTONS.find((item) => item.transform === id);
+    const source = getDefaultButtons(config.language).find((item) => item.transform === id);
     if (source) {
       newName = source.name;
       newDescription = source.description;
@@ -275,7 +306,9 @@
   }
 
   function addButton() {
-    const source = DEFAULT_BUTTONS.find((item) => item.transform === newTransformId);
+    const source = getDefaultButtons(config.language).find(
+      (item) => item.transform === newTransformId,
+    );
     if (!source) return;
     const button: TransformButton = {
       id: `${source.transform}-${Date.now()}`,
@@ -297,7 +330,7 @@
   function customParamLabel(customType: string | null | undefined, first: boolean): string {
     const type = CUSTOM_TYPES.find((item) => item.id === customType);
     if (!type) return "";
-    return first ? type.paramLabel : type.param2Label ?? "";
+    return first ? tt(type.paramKey) : type.param2Key ? tt(type.param2Key) : "";
   }
 
   function onCustomTypeChange(event: Event) {
@@ -307,15 +340,8 @@
     newCustomParam2 = "";
     const type = CUSTOM_TYPES.find((item) => item.id === id);
     if (type) {
-      newCustomName = type.name;
-      newCustomDescription =
-        id === "append-suffix"
-          ? "每行末尾追加指定文本"
-          : id === "prepend-prefix"
-            ? "每行开头添加指定文本"
-            : id === "replace-text"
-              ? "全文替换指定文本"
-              : "去掉所有重复行（完整匹配）";
+      newCustomName = tt(type.nameKey);
+      newCustomDescription = tt(type.nameKey);
     } else {
       newCustomName = "";
       newCustomDescription = "";
@@ -341,7 +367,7 @@
     }
     const button: TransformButton = {
       id: `custom-${Date.now()}`,
-      name: newCustomName.trim() || type.name,
+      name: newCustomName.trim() || tt(type.nameKey),
       transform: "custom",
       description: newCustomDescription.trim(),
       visible: false,
@@ -372,7 +398,10 @@
   }
 
   function restoreDefaultButtons() {
-    scheduleSave({ ...config, buttons: DEFAULT_BUTTONS.map((b) => ({ ...b })) });
+    scheduleSave({
+      ...config,
+      buttons: getDefaultButtons(config.language).map((b) => ({ ...b })),
+    });
   }
 
   function requestRestoreDefaultButtons() {
@@ -416,6 +445,41 @@
     }
   }
 
+  async function manualCheckUpdate() {
+    checkingUpdate = true;
+    try {
+      const info = await checkForUpdate();
+      updateInfo = info;
+      if (!info.latest) {
+        status = tt("settings.update.latest");
+      }
+    } catch (e) {
+      status = String(e);
+    } finally {
+      checkingUpdate = false;
+    }
+  }
+
+  async function downloadUpdateNow() {
+    if (!updateInfo?.assetUrl) return;
+    try {
+      updateReadyPath = await downloadUpdate(updateInfo.assetUrl);
+      status = tt("settings.update.ready");
+    } catch (e) {
+      status = String(e);
+    }
+  }
+
+  async function confirmInstallUpdate() {
+    if (!updateReadyPath) return;
+    try {
+      status = await installUpdate(updateReadyPath);
+    } catch (e) {
+      status = String(e);
+    }
+    updateReadyPath = null;
+  }
+
   // ---------- 外观 / 通用 ----------
   function updateAppearance(patch: Partial<AppConfig>) {
     scheduleQuickSave({ ...config, ...patch });
@@ -445,14 +509,14 @@
 
 <main class="settings-page" oncontextmenu={(event) => event.preventDefault()}>
   <header class="settings-header">
-    <h1>StringCraft 设置</h1>
+    <h1>{tt("settings.title")}</h1>
     <div class="header-actions">
       {#if status}
         <span class="save-status" class:error={status.includes("失败") || status.includes("错误")}>
           {status}
         </span>
       {/if}
-      <button type="button" class="ghost-button" onclick={() => win.hide()}>关闭</button>
+      <button type="button" class="ghost-button" onclick={() => win.hide()}>{tt("settings.close")}</button>
     </div>
   </header>
 
@@ -461,10 +525,10 @@
   {/if}
 
   <section class="settings-section">
-    <h2>全局快捷键</h2>
-    <p class="hint">点击输入框后直接按下目标组合键；必须包含至少一个修饰键。</p>
+    <h2>{tt("settings.section.hotkey")}</h2>
+    <p class="hint">{tt("settings.hotkey.hint")}</p>
     <div class="field-row">
-      <label for="hotkey">呼入/呼出悬浮条</label>
+      <label for="hotkey">{tt("settings.hotkey.label")}</label>
       <input
         id="hotkey"
         type="text"
@@ -474,14 +538,14 @@
         onclick={startRecording}
       />
       <button type="button" class="ghost-button" onclick={restoreDefaultHotkey}>
-        恢复默认
+        {tt("settings.hotkey.restore")}
       </button>
     </div>
   </section>
 
   <section class="settings-section">
-    <h2>按钮管理</h2>
-    <p class="hint">按住每项左侧拖拽手柄可任意调整顺序；可增删、显示/隐藏、修改名称与说明。</p>
+    <h2>{tt("settings.section.buttons")}</h2>
+    <p class="hint">{tt("settings.buttons.hint")}</p>
 
     <div class="button-list" role="list">
           {#each config.buttons as button (button.id)}
@@ -514,7 +578,7 @@
                     type="text"
                     value={button.name}
                     maxlength="8"
-                    placeholder="名称（≤8 字）"
+                    placeholder={tt("settings.buttons.name")}
                     onchange={(e) =>
                       updateButtonName(index, (e.currentTarget as HTMLInputElement).value)}
                   />
@@ -522,7 +586,7 @@
                     type="text"
                     value={button.description}
                     maxlength="60"
-                    placeholder="说明（选填）"
+                    placeholder={tt("settings.buttons.desc")}
                     onchange={(e) =>
                       updateButtonDescription(
                         index,
@@ -588,7 +652,7 @@
         onchange={onAddTransformChange}
         disabled={unusedTransforms.length === 0}
       >
-        <option value="" disabled>请选择转换功能</option>
+        <option value="" disabled>{tt("settings.buttons.customType")}</option>
         {#each unusedTransforms as source (source.transform)}
           <option value={source.transform}>{source.name}</option>
         {/each}
@@ -617,26 +681,26 @@
         disabled={unusedTransforms.length === 0}
         onclick={addButton}
       >
-        添加按钮
+        {tt("settings.buttons.add")}
       </button>
     </div>
 
     <div class="add-row custom-add-row">
       <select value={newCustomType} onchange={onCustomTypeChange}>
-        <option value="" disabled>自定义类型</option>
+        <option value="" disabled>{tt("settings.buttons.customType")}</option>
         {#each CUSTOM_TYPES as type (type.id)}
-          <option value={type.id}>{type.name}</option>
+          <option value={type.id}>{tt(type.nameKey)}</option>
         {/each}
       </select>
       <input
         type="text"
-        placeholder="名称（默认用类型名）"
+        placeholder={tt("settings.buttons.customName")}
         maxlength="8"
         bind:value={newCustomName}
       />
       <input
         type="text"
-        placeholder="说明（选填）"
+        placeholder={tt("settings.buttons.desc")}
         maxlength="60"
         bind:value={newCustomDescription}
       />
@@ -657,20 +721,20 @@
         />
       {/if}
       <button type="button" class="ghost-button" onclick={addCustomButton}>
-        添加自定义按钮
+        {tt("settings.buttons.addCustom")}
       </button>
     </div>
 
     <button type="button" class="ghost-button" onclick={requestRestoreDefaultButtons}>
-      恢复默认按钮
+      {tt("settings.buttons.restore")}
     </button>
   </section>
 
   <section class="settings-section">
-    <h2>外观</h2>
+    <h2>{tt("settings.section.appearance")}</h2>
     <div class="field-grid">
       <div class="field-row">
-        <label for="button-width">按钮宽度（20~200px）</label>
+        <label for="button-width">{tt("settings.appearance.width")}</label>
         <input
           id="button-width"
           type="range"
@@ -683,7 +747,7 @@
         <span class="range-value">{config.buttonWidth}px</span>
       </div>
       <div class="field-row">
-        <label for="button-height">按钮高度（10~80px）</label>
+        <label for="button-height">{tt("settings.appearance.height")}</label>
         <input
           id="button-height"
           type="range"
@@ -696,7 +760,7 @@
         <span class="range-value">{config.buttonHeight}px</span>
       </div>
       <div class="field-row">
-        <label for="font-size">按钮字号（10~24px）</label>
+        <label for="font-size">{tt("settings.appearance.font")}</label>
         <input
           id="font-size"
           type="range"
@@ -709,7 +773,7 @@
         <span class="range-value">{config.fontSize}px</span>
       </div>
       <div class="field-row">
-        <label for="opacity">背景不透明度</label>
+        <label for="opacity">{tt("settings.appearance.opacity")}</label>
         <input
           id="opacity"
           type="range"
@@ -722,22 +786,22 @@
         <span class="range-value">{config.opacity}%</span>
       </div>
       <div class="field-row">
-        <label for="theme">主题</label>
+        <label for="theme">{tt("settings.appearance.theme")}</label>
         <select
           id="theme"
           value={config.theme}
           onchange={(e) =>
             updateAppearance({ theme: e.currentTarget.value as AppConfig["theme"] })}
         >
-          <option value="system">跟随系统</option>
-          <option value="light">浅色</option>
-          <option value="dark">深色</option>
+          <option value="system">{tt("settings.appearance.themeSystem")}</option>
+          <option value="light">{tt("settings.appearance.themeLight")}</option>
+          <option value="dark">{tt("settings.appearance.themeDark")}</option>
         </select>
       </div>
     </div>
 
     <div class="color-section">
-      <div class="color-section-title">背景颜色 · 马卡龙色系</div>
+      <div class="color-section-title">{tt("settings.appearance.colorMacaron")}</div>
       <div class="color-presets">
         {#each MACARON_COLORS as color (color.name)}
           <button
@@ -752,7 +816,7 @@
           </button>
         {/each}
       </div>
-      <div class="color-section-title">背景颜色 · 莫兰迪色系</div>
+      <div class="color-section-title">{tt("settings.appearance.colorMorandi")}</div>
       <div class="color-presets">
         {#each MORANDI_COLORS as color (color.name)}
           <button
@@ -768,7 +832,7 @@
         {/each}
       </div>
       <div class="custom-color-row">
-        <label for="custom-color">自定义颜色</label>
+        <label for="custom-color">{tt("settings.appearance.customColor")}</label>
         <input
           id="custom-color"
           type="color"
@@ -777,18 +841,18 @@
         />
         <span class="custom-preview">
           <span class="swatch-mini" style:background={config.backgroundColor}></span>
-          浅色
+          {tt("settings.appearance.light")}
           <span class="swatch-mini" style:background={config.backgroundColorDark}></span>
-          深色
+          {tt("settings.appearance.dark")}
         </span>
       </div>
     </div>
   </section>
 
   <section class="settings-section">
-    <h2>通用</h2>
+    <h2>{tt("settings.section.general")}</h2>
     <div class="toggle-row">
-      <label for="autostart">开机自启</label>
+      <label for="autostart">{tt("settings.general.autostart")}</label>
       <input
         id="autostart"
         type="checkbox"
@@ -797,7 +861,7 @@
       />
     </div>
     <div class="toggle-row">
-      <label for="restore-clipboard">自动替换后恢复原剪贴板</label>
+      <label for="restore-clipboard">{tt("settings.general.restoreClipboard")}</label>
       <input
         id="restore-clipboard"
         type="checkbox"
@@ -808,8 +872,8 @@
     </div>
     <div class="toggle-row">
       <label for="debug-log">
-        调试日志
-        <span class="toggle-hint">默认关闭；开启后记录运行日志（不含被转换的文本）</span>
+        {tt("settings.general.debugLog")}
+        <span class="toggle-hint">{tt("settings.general.debugHint")}</span>
       </label>
       <input
         id="debug-log"
@@ -819,16 +883,28 @@
       />
     </div>
     <div class="field-row">
-      <label for="config-import-export">配置导入/导出</label>
+      <label for="config-import-export">{tt("settings.general.importExport")}</label>
       <button type="button" class="ghost-button" onclick={exportConfig}>
-        导出配置
+        {tt("settings.general.export")}
       </button>
       <button type="button" class="ghost-button" onclick={importConfig}>
-        导入配置
+        {tt("settings.general.import")}
       </button>
     </div>
     <div class="field-row">
-      <label for="delay">自动替换延迟（ms，20~1000，高级）</label>
+      <label for="language">{tt("settings.general.language")}</label>
+      <select
+        id="language"
+        value={config.language}
+        onchange={(e) =>
+          updateAppearance({ language: e.currentTarget.value as AppConfig["language"] })}
+      >
+        <option value="zh-CN">中文</option>
+        <option value="en-US">English</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <label for="delay">{tt("settings.general.delay")}</label>
       <input
         id="delay"
         type="number"
@@ -841,9 +917,87 @@
     </div>
   </section>
 
+  <section class="settings-section">
+    <h2>{tt("settings.section.update")}</h2>
+    <div class="field-row">
+      <label for="check-update">{tt("settings.update.check")}</label>
+      <button
+        id="check-update"
+        type="button"
+        class="ghost-button"
+        disabled={checkingUpdate}
+        onclick={manualCheckUpdate}
+      >
+        {checkingUpdate ? tt("settings.update.checking") : tt("settings.update.check")}
+      </button>
+    </div>
+    <div class="toggle-row">
+      <label for="auto-check-update">{tt("settings.update.autoCheck")}</label>
+      <input
+        id="auto-check-update"
+        type="checkbox"
+        checked={config.autoCheckUpdate}
+        onchange={(e) =>
+          updateAppearance({ autoCheckUpdate: e.currentTarget.checked })}
+      />
+    </div>
+    <div class="toggle-row">
+      <label for="auto-update">{tt("settings.update.autoUpdate")}</label>
+      <input
+        id="auto-update"
+        type="checkbox"
+        checked={config.autoUpdate}
+        onchange={(e) => updateAppearance({ autoUpdate: e.currentTarget.checked })}
+      />
+    </div>
+    {#if updateInfo?.latest}
+      <div class="update-panel">
+        <p>{tt("settings.update.found", { version: updateInfo.version ?? "" })}</p>
+        {#if updateInfo.notes}
+          <pre>{updateInfo.notes}</pre>
+        {/if}
+        <button type="button" class="ghost-button" onclick={downloadUpdateNow}>
+          {tt("settings.update.download")}
+        </button>
+      </div>
+    {/if}
+  </section>
+
+  <section class="settings-section">
+    <h2>{tt("settings.section.donation")}</h2>
+    {#if config.showDonation}
+      <p class="hint">{tt("settings.donation.copy")}</p>
+      <div class="donation-images">
+        <figure>
+          <img src={alipayImg} alt={tt("settings.donation.alipay")} />
+          <figcaption>{tt("settings.donation.alipay")}</figcaption>
+        </figure>
+        <figure>
+          <img src={wechatImg} alt={tt("settings.donation.wechat")} />
+          <figcaption>{tt("settings.donation.wechat")}</figcaption>
+        </figure>
+      </div>
+      <button
+        type="button"
+        class="ghost-button"
+        onclick={() => updateAppearance({ showDonation: false })}
+      >
+        {tt("settings.donation.hide")}
+      </button>
+    {:else}
+      <button
+        type="button"
+        class="ghost-button"
+        onclick={() => updateAppearance({ showDonation: true })}
+      >
+        {tt("settings.donation.show")}
+      </button>
+    {/if}
+  </section>
+
   <footer class="settings-footer">
-    <p>StringCraft v0.1.0 · M5 设置页</p>
-    <p>有任何问题或建议请反馈至邮箱 <a href="mailto:jxzlh1208@163.com">jxzlh1208@163.com</a></p>
+    <p>{tt("settings.footer.version")}</p>
+    <p>{tt("settings.footer.feedback")}<a href="mailto:jxzlh1208@163.com">jxzlh1208@163.com</a></p>
   </footer>
 
   {#if showRestoreConfirm}
@@ -855,18 +1009,38 @@
         tabindex="0"
         onpointerdown={(event) => event.stopPropagation()}
       >
-        <h3>恢复默认按钮</h3>
-        <p>确定要恢复为默认的 23 个内置按钮吗？当前按钮列表将被替换。</p>
+        <h3>{tt("settings.buttons.restoreConfirmTitle")}</h3>
+        <p>{tt("settings.buttons.restoreConfirmBody")}</p>
         <div class="modal-actions">
           <button type="button" class="ghost-button" onclick={cancelRestoreDefaultButtons}>
-            取消
+            {tt("settings.buttons.cancel")}
           </button>
           <button
             type="button"
             class="ghost-button danger"
             onclick={confirmRestoreDefaultButtons}
           >
-            确认恢复
+            {tt("settings.buttons.confirm")}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if updateReadyPath}
+    <div class="modal-backdrop" role="presentation">
+      <div class="modal" role="dialog" aria-modal="true" tabindex="0">
+        <h3>{tt("settings.update.ready")}</h3>
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="ghost-button"
+            onclick={() => (updateReadyPath = null)}
+          >
+            {tt("settings.buttons.cancel")}
+          </button>
+          <button type="button" class="ghost-button" onclick={confirmInstallUpdate}>
+            {tt("settings.update.install")}
           </button>
         </div>
       </div>
@@ -1324,5 +1498,48 @@
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+  }
+
+  .update-panel {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--bar-border);
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  .update-panel pre {
+    margin: 6px 0;
+    max-height: 120px;
+    overflow: auto;
+    font-size: 12px;
+    white-space: pre-wrap;
+    color: var(--text-muted);
+  }
+
+  .donation-images {
+    display: flex;
+    gap: 24px;
+    margin: 12px 0;
+    flex-wrap: wrap;
+  }
+
+  .donation-images figure {
+    text-align: center;
+  }
+
+  .donation-images img {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    border: 1px solid var(--bar-border);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .donation-images figcaption {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
   }
 </style>

@@ -29,6 +29,26 @@ export async function importConfigFrom(path: string): Promise<string> {
   return invoke<string>("import_config_from", { path });
 }
 
+export interface UpdateInfo {
+  latest: boolean;
+  version?: string | null;
+  notes?: string | null;
+  url?: string | null;
+  assetUrl?: string | null;
+}
+
+export async function checkForUpdate(): Promise<UpdateInfo> {
+  return invoke<UpdateInfo>("check_for_update");
+}
+
+export async function downloadUpdate(assetUrl: string): Promise<string> {
+  return invoke<string>("download_update", { assetUrl });
+}
+
+export async function installUpdate(path: string): Promise<string> {
+  return invoke<string>("install_update", { path });
+}
+
 export async function showSettingsWindow(): Promise<void> {
   await invoke("open_settings");
 }

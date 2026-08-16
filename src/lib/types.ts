@@ -30,5 +30,9 @@ export interface AppConfig {
   restoreClipboard: boolean;
   replaceDelayMs: number;
   debugLog: boolean;
+  language: "zh-CN" | "en-US";
+  autoCheckUpdate: boolean;
+  autoUpdate: boolean;
+  showDonation: boolean;
   buttons: TransformButton[];
 }

@@ -34,6 +34,10 @@ pub struct AppConfig {
     pub restore_clipboard: bool,
     pub replace_delay_ms: u32,
     pub debug_log: bool,
+    pub language: String,
+    pub auto_check_update: bool,
+    pub auto_update: bool,
+    pub show_donation: bool,
     pub buttons: Vec<TransformButton>,
 }
 
@@ -113,6 +117,10 @@ pub fn default_config() -> AppConfig {
         restore_clipboard: true,
         replace_delay_ms: 80,
         debug_log: false,
+        language: "zh-CN".to_string(),
+        auto_check_update: true,
+        auto_update: false,
+        show_donation: true,
         buttons: default_buttons(),
     }
 }
@@ -349,6 +357,9 @@ pub fn normalize(config: &mut AppConfig) {
     config.replace_delay_ms = config.replace_delay_ms.clamp(20, 1000);
     if !matches!(config.theme.as_str(), "system" | "light" | "dark") {
         config.theme = "system".to_string();
+    }
+    if !matches!(config.language.as_str(), "zh-CN" | "en-US") {
+        config.language = "zh-CN".to_string();
     }
     normalize_color(&mut config.background_color, DEFAULT_BACKGROUND_COLOR);
     normalize_color(

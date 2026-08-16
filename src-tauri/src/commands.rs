@@ -1,5 +1,5 @@
 use crate::config::{self, AppConfig, ConfigState, WindowPosition};
-use crate::{hotkey, logging, selection, transform, FLOAT_BAR_LABEL};
+use crate::{hotkey, logging, selection, transform, update, FLOAT_BAR_LABEL};
 use std::fs;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -163,6 +163,24 @@ pub fn import_config_from(app: AppHandle, path: String) -> Result<String, String
     logging::log_event(&app, "配置已导入");
     let _ = app.emit_to(FLOAT_BAR_LABEL, "config-changed", ());
     Ok("配置已导入并生效".to_string())
+}
+
+/// 手动检查更新。
+#[tauri::command]
+pub fn check_for_update() -> Result<update::UpdateInfo, String> {
+    update::check_for_update()
+}
+
+/// 下载更新安装包，返回本地路径。
+#[tauri::command]
+pub fn download_update(asset_url: String) -> Result<String, String> {
+    update::download_update(&asset_url)
+}
+
+/// 启动已下载的安装程序。
+#[tauri::command]
+pub fn install_update(path: String) -> Result<String, String> {
+    update::launch_installer(&path)
 }
 
 /// 快捷键变更：先注册新键，成功后再注销旧键；失败则回滚并报错。

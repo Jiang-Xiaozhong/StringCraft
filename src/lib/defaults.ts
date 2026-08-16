@@ -1,4 +1,39 @@
 import type { AppConfig, TransformButton } from "./types";
+import type { Language } from "./i18n";
+
+const DESCRIPTION_EN: Record<string, string> = {
+  "json-format": "Format JSON",
+  "to-camel": "Convert underscore/space separated words to camelCase",
+  "camel-to-underscore": "Split camelCase and join with underscores",
+  "camel-to-space": "Split camelCase and join with spaces",
+  "uncapitalize-words": "Lowercase the first letter of each word",
+  upper: "Convert all letters to uppercase",
+  lower: "Convert all letters to lowercase",
+  "remove-symbols": "Remove all characters except Unicode letters, digits and whitespace",
+  "space-to-underscore": "Replace spaces with underscores",
+  "space-to-newline": "Replace spaces with newlines",
+  "space-to-hyphen": "Replace spaces with hyphens",
+  "underscore-to-space": "Replace underscores with spaces",
+  "newline-to-space": "Replace newlines with spaces",
+  "remove-spaces": "Remove all space characters",
+  "remove-newlines": "Remove all newlines",
+  "underscore-to-hyphen": "Replace underscores with hyphens",
+  "underscore-to-dot": "Replace underscores with dots",
+  "hyphen-to-underscore": "Replace hyphens with underscores",
+  "dot-to-underscore": "Replace dots with underscores",
+  "sentence-case": "Uppercase the first letter of each sentence",
+  "capitalize-words": "Uppercase the first letter of each word, lowercase the rest",
+  "number-to-rmb": "Convert a number to RMB uppercase",
+  "rmb-to-number": "Convert RMB uppercase to a number",
+};
+
+export function getDefaultButtons(lang: Language): TransformButton[] {
+  return DEFAULT_BUTTONS.map((button) => ({
+    ...button,
+    description:
+      lang === "en-US" ? (DESCRIPTION_EN[button.transform] ?? button.description) : button.description,
+  }));
+}
 
 export const DEFAULT_BUTTONS: TransformButton[] = [
   { id: "json-format", name: "JSON", transform: "json-format", description: "JSON 格式化", visible: true },
@@ -41,5 +76,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   restoreClipboard: true,
   replaceDelayMs: 80,
   debugLog: false,
+  language: "zh-CN",
+  autoCheckUpdate: true,
+  autoUpdate: false,
+  showDonation: true,
   buttons: DEFAULT_BUTTONS,
 };

@@ -5,6 +5,7 @@ mod logging;
 mod selection;
 mod transform;
 mod tray;
+mod update;
 
 use crate::config::ConfigState;
 use std::sync::Mutex;
@@ -101,6 +102,7 @@ pub fn run() {
 
             tray::create_tray(app)?;
             logging::log_event(app.handle(), "应用启动完成");
+            update::start_update_checker(app.handle().clone());
             println!("[StringCraft] 托盘已创建");
             println!("[StringCraft] 启动完成");
             Ok(())
@@ -113,6 +115,9 @@ pub fn run() {
             commands::update_float_bar_width,
             commands::export_config_to,
             commands::import_config_from,
+            commands::check_for_update,
+            commands::download_update,
+            commands::install_update,
             commands::open_settings,
             commands::execute_button
         ])

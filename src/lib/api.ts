@@ -53,6 +53,18 @@ export async function installUpdate(path: string): Promise<string> {
   return invoke<string>("install_update", { path });
 }
 
+export async function isMacOS(): Promise<boolean> {
+  return invoke<boolean>("is_macos");
+}
+
+export async function macOSAccessibilityTrusted(): Promise<boolean> {
+  return invoke<boolean>("macos_accessibility_trusted");
+}
+
+export async function openMacOSAccessibilitySettings(): Promise<void> {
+  await invoke("open_macos_accessibility_settings");
+}
+
 export async function showSettingsWindow(): Promise<void> {
   await invoke("open_settings");
 }

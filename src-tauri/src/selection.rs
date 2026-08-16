@@ -25,6 +25,11 @@ pub fn replace_selection(
         (config.restore_clipboard, config.replace_delay_ms as u64)
     };
 
+    // macOS：未授权辅助功能时无法模拟按键，先给出明确引导。
+    if !crate::macos::accessibility_trusted() {
+        return Err("需要开启“辅助功能”权限，请在设置页开启".to_string());
+    }
+
     // 1. 保存当前剪贴板文本；非文本内容直接放弃，避免破坏剪贴板
     let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("无法访问剪贴板：{e}"))?;
     let backup = match clipboard.get_text() {

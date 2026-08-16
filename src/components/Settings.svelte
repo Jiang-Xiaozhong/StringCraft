@@ -11,6 +11,9 @@
     getConfig,
     importConfigFrom,
     installUpdate,
+    isMacOS,
+    macOSAccessibilityTrusted,
+    openMacOSAccessibilitySettings,
     saveConfig,
     type UpdateInfo,
   } from "../lib/api";
@@ -36,6 +39,8 @@
   let checkingUpdate = $state(false);
   let updateInfo: UpdateInfo | null = $state(null);
   let updateReadyPath: string | null = $state(null);
+  let platform = $state("windows");
+  let macPermission = $state(false);
   let systemDark = $state(false);
   let draggingIndex: number | null = $state(null);
   let dragOverIndex: number | null = $state(null);
@@ -89,6 +94,10 @@
       updateReadyPath = event.payload as string;
       status = tt("settings.update.ready");
     });
+    if (await isMacOS()) {
+      platform = "macos";
+      macPermission = await macOSAccessibilityTrusted();
+    }
   });
 
   onDestroy(() => {
@@ -480,6 +489,18 @@
     updateReadyPath = null;
   }
 
+  async function refreshMacPermission() {
+    macPermission = await macOSAccessibilityTrusted();
+  }
+
+  async function openMacSettings() {
+    try {
+      await openMacOSAccessibilitySettings();
+    } catch (e) {
+      status = translateRustMessage(config.language, String(e));
+    }
+  }
+
   // ---------- 外观 / 通用 ----------
   function updateAppearance(patch: Partial<AppConfig>) {
     scheduleQuickSave({ ...config, ...patch });
@@ -848,6 +869,25 @@
       </div>
     </div>
   </section>
+
+  {#if platform === "macos"}
+    <section class="settings-section">
+      <h2>{tt("settings.macos.title")}</h2>
+      <p class="hint">
+        {macPermission
+          ? tt("settings.macos.statusGranted")
+          : tt("settings.macos.statusDenied")}
+      </p>
+      <div class="field-row">
+        <button type="button" class="ghost-button" onclick={refreshMacPermission}>
+          {tt("settings.macos.check")}
+        </button>
+        <button type="button" class="ghost-button" onclick={openMacSettings}>
+          {tt("settings.macos.open")}
+        </button>
+      </div>
+    </section>
+  {/if}
 
   <section class="settings-section">
     <h2>{tt("settings.section.general")}</h2>

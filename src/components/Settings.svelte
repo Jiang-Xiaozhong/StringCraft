@@ -61,6 +61,12 @@
     saveTimer = setTimeout(() => doSave(next), 350);
   }
 
+  function scheduleQuickSave(next: AppConfig) {
+    clearTimeout(saveTimer);
+    status = "正在保存…";
+    saveTimer = setTimeout(() => doSave(next), 80);
+  }
+
   async function doSave(next: AppConfig) {
     try {
       const latest = await getConfig();
@@ -319,7 +325,7 @@
 
   // ---------- 外观 / 通用 ----------
   function updateAppearance(patch: Partial<AppConfig>) {
-    scheduleSave({ ...config, ...patch });
+    scheduleQuickSave({ ...config, ...patch });
   }
 
   function selectPreset(color: { name: string; light: string; dark: string }) {
@@ -503,37 +509,40 @@
         <label for="button-width">按钮宽度（20~200px）</label>
         <input
           id="button-width"
-          type="number"
+          type="range"
           min="20"
           max="200"
           value={config.buttonWidth}
-          onchange={(e) =>
+          oninput={(e) =>
             numericInput(e, 20, 200, (v) => updateAppearance({ buttonWidth: v }))}
         />
+        <span class="range-value">{config.buttonWidth}px</span>
       </div>
       <div class="field-row">
         <label for="button-height">按钮高度（10~80px）</label>
         <input
           id="button-height"
-          type="number"
+          type="range"
           min="10"
           max="80"
           value={config.buttonHeight}
-          onchange={(e) =>
+          oninput={(e) =>
             numericInput(e, 10, 80, (v) => updateAppearance({ buttonHeight: v }))}
         />
+        <span class="range-value">{config.buttonHeight}px</span>
       </div>
       <div class="field-row">
         <label for="font-size">按钮字号（10~24px）</label>
         <input
           id="font-size"
-          type="number"
+          type="range"
           min="10"
           max="24"
           value={config.fontSize}
-          onchange={(e) =>
+          oninput={(e) =>
             numericInput(e, 10, 24, (v) => updateAppearance({ fontSize: v }))}
         />
+        <span class="range-value">{config.fontSize}px</span>
       </div>
       <div class="field-row">
         <label for="opacity">背景不透明度</label>

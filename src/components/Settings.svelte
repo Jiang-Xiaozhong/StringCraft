@@ -451,7 +451,7 @@
       const info = await checkForUpdate();
       updateInfo = info;
       if (!info.latest) {
-        status = tt("settings.update.latest");
+        status = tt("settings.update.latest", { version: info.version ?? "0.1.0" });
       }
     } catch (e) {
       status = String(e);

@@ -1539,7 +1539,8 @@
 
   .donation-images figcaption {
     margin-top: 6px;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 700;
     color: var(--text-muted);
   }
 </style>

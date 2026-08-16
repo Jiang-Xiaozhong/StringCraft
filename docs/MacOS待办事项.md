@@ -4,7 +4,7 @@
 
 ## 已完成（代码已写好，待 macOS 验证）
 
-- [ ] macOS 构建 workflow（`.github/workflows/macos-build.yml`）：推送到 `dev`/`main` 后自动在 macOS runner 上编译、检查、测试并产出 debug 产物
+- [x] macOS 构建 workflow（`.github/workflows/macos-build.yml`）：推送到 `dev`/`main` 后自动在 macOS runner 上编译、检查、测试并产出 debug 产物；已运行通过
 - [ ] 辅助功能权限检测（`AXIsProcessTrusted`）与设置页“macOS 权限”区
 - [ ] 一键打开系统“辅助功能”设置
 - [ ] 自动替换前未授权权限时的明确提示
@@ -14,7 +14,7 @@
 
 ## 待开发 / 待验证
 
-- [ ] macOS 真机/CI 编译验证：`AXIsProcessTrusted` 链接、DMG 打包是否通过
+- [x] macOS CI 编译验证：`AXIsProcessTrusted` 链接、DMG 打包通过（GitHub Actions 首次运行成功）
 - [ ] 首次启动/首次使用时自动引导开启辅助功能权限的交互体验
 - [ ] 快捷键录制、冲突提示在 macOS 上验证
 - [ ] 自动替换链路在 macOS 常用应用验证（备忘录、浏览器、IDE、Office）

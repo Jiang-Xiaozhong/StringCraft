@@ -88,6 +88,17 @@ pub fn run() {
                 }
             }
 
+            // 设置窗口点击系统关闭按钮时隐藏而不是销毁，保证下次仍能打开。
+            if let Some(settings) = app.get_webview_window(SETTINGS_LABEL) {
+                let settings_win = settings.clone();
+                settings.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = settings_win.hide();
+                    }
+                });
+            }
+
             tray::create_tray(app)?;
             logging::log_event(app.handle(), "应用启动完成");
             println!("[StringCraft] 托盘已创建");

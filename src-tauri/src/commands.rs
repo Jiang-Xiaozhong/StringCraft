@@ -45,14 +45,27 @@ pub async fn execute_button(
     app: AppHandle,
     transform_id: String,
     text: Option<String>,
+    custom_type: Option<String>,
+    param1: Option<String>,
+    param2: Option<String>,
 ) -> Result<String, String> {
     logging::log_event(&app, &format!("执行转换：{transform_id}"));
     if let Some(text) = text {
-        return Ok(transform::transform(&text, &transform_id));
+        return Ok(match custom_type.as_deref() {
+            Some(custom_type) => transform::transform_custom(
+                &text,
+                custom_type,
+                param1.as_deref(),
+                param2.as_deref(),
+            ),
+            None => transform::transform(&text, &transform_id),
+        });
     }
-    tauri::async_runtime::spawn_blocking(move || selection::replace_selection(&app, &transform_id))
-        .await
-        .map_err(|e| format!("任务执行失败：{e}"))?
+    tauri::async_runtime::spawn_blocking(move || {
+        selection::replace_selection(&app, &transform_id, custom_type, param1, param2)
+    })
+    .await
+    .map_err(|e| format!("任务执行失败：{e}"))?
 }
 
 #[tauri::command]

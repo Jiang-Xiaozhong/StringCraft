@@ -54,6 +54,12 @@ pub struct TransformButton {
     pub description: String,
     #[serde(default = "default_true")]
     pub visible: bool,
+    #[serde(default)]
+    pub custom_type: Option<String>,
+    #[serde(default)]
+    pub param1: Option<String>,
+    #[serde(default)]
+    pub param2: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,6 +86,9 @@ fn button_visible(
         transform: transform.to_string(),
         description: description.to_string(),
         visible,
+        custom_type: None,
+        param1: None,
+        param2: None,
     }
 }
 
@@ -92,9 +101,9 @@ pub fn default_config() -> AppConfig {
         version: 1,
         hotkey: crate::hotkey::default_hotkey().to_string(),
         toolbar_width: default_toolbar_width(),
-        button_width: 72,
-        button_height: 32,
-        font_size: 13,
+        button_width: 60,
+        button_height: 30,
+        font_size: 12,
         opacity: 100,
         theme: "system".to_string(),
         background_color: DEFAULT_BACKGROUND_COLOR.to_string(),
@@ -110,8 +119,8 @@ pub fn default_config() -> AppConfig {
 
 /// 默认工具条宽度：恰好容纳 10 个默认宽度按钮 + 横排的设置/隐藏按钮。
 fn default_toolbar_width() -> u32 {
-    let action_width_horizontal = 2 * 32 + ACTION_GAP;
-    BAR_PADDING_TOTAL + action_width_horizontal + BODY_GAP + BAR_BORDER + 10 * 72 + 9 * BUTTON_GAP
+    let action_width_horizontal = 2 * 30 + ACTION_GAP;
+    BAR_PADDING_TOTAL + action_width_horizontal + BODY_GAP + BAR_BORDER + 10 * 60 + 9 * BUTTON_GAP
 }
 
 /// 工具条最小宽度：至少容纳 1 个按钮和设置按钮。
@@ -336,7 +345,7 @@ pub fn normalize(config: &mut AppConfig) {
         min_toolbar_width(config.button_width, config.button_height),
         4000,
     );
-    config.opacity = config.opacity.clamp(20, 100);
+    config.opacity = config.opacity.clamp(0, 100);
     config.replace_delay_ms = config.replace_delay_ms.clamp(20, 1000);
     if !matches!(config.theme.as_str(), "system" | "light" | "dark") {
         config.theme = "system".to_string();
@@ -350,8 +359,8 @@ pub fn normalize(config: &mut AppConfig) {
 
 /// 逻辑校验：按钮内容/快捷键格式。
 pub fn validate(config: &AppConfig) -> Result<(), String> {
-    if !(20..=100).contains(&config.opacity) {
-        return Err("背景不透明度需在 20~100 之间".to_string());
+    if !(0..=100).contains(&config.opacity) {
+        return Err("背景不透明度需在 0~100 之间".to_string());
     }
     if !is_hex_color(&config.background_color) {
         return Err("浅色背景颜色格式无效".to_string());
@@ -363,7 +372,25 @@ pub fn validate(config: &AppConfig) -> Result<(), String> {
         if item.name.trim().is_empty() {
             return Err("按钮名称不能为空".to_string());
         }
-        if !crate::transform::is_known_transform(&item.transform) {
+        if item.transform == "custom" {
+            match item.custom_type.as_deref() {
+                Some("append-suffix") | Some("prepend-prefix") => {
+                    if item.param1.as_deref().unwrap_or("").trim().is_empty() {
+                        return Err("加后缀/加前缀需要填写目标文本".to_string());
+                    }
+                }
+                Some("replace-text") => {
+                    if item.param1.as_deref().unwrap_or("").trim().is_empty()
+                        || item.param2.as_deref().unwrap_or("").trim().is_empty()
+                    {
+                        return Err("文本替换需要填写被替换文本和替换为文本".to_string());
+                    }
+                }
+                Some("remove-duplicate-lines") => {}
+                Some(_) => return Err("未知的自定义按钮类型".to_string()),
+                None => return Err("自定义按钮缺少类型".to_string()),
+            }
+        } else if !crate::transform::is_known_transform(&item.transform) {
             return Err(format!("未知转换功能：{}", item.transform));
         }
     }

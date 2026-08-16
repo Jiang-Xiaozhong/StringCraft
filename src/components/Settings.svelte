@@ -15,6 +15,11 @@
   let newTransformId = $state("");
   let newName = $state("");
   let newDescription = $state("");
+  let newCustomType = $state("");
+  let newCustomParam1 = $state("");
+  let newCustomParam2 = $state("");
+  let newCustomName = $state("");
+  let newCustomDescription = $state("");
   let systemDark = $state(false);
   let draggingIndex: number | null = $state(null);
   let dragOverIndex: number | null = $state(null);
@@ -23,6 +28,13 @@
   let dragPointerStartY = 0;
   let dragTargets: number[] = [];
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const CUSTOM_TYPES = [
+    { id: "append-suffix", name: "加后缀", paramLabel: "后缀文本" },
+    { id: "prepend-prefix", name: "加前缀", paramLabel: "前缀文本" },
+    { id: "replace-text", name: "文本替换", paramLabel: "被替换文本", param2Label: "替换为文本" },
+    { id: "remove-duplicate-lines", name: "去重复行", paramLabel: "" },
+  ];
 
   const win = getCurrentWindow();
   const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -282,6 +294,83 @@
     applyTransformDefaults((event.currentTarget as HTMLSelectElement).value);
   }
 
+  function customParamLabel(customType: string | null | undefined, first: boolean): string {
+    const type = CUSTOM_TYPES.find((item) => item.id === customType);
+    if (!type) return "";
+    return first ? type.paramLabel : type.param2Label ?? "";
+  }
+
+  function onCustomTypeChange(event: Event) {
+    const id = (event.currentTarget as HTMLSelectElement).value;
+    newCustomType = id;
+    newCustomParam1 = "";
+    newCustomParam2 = "";
+    const type = CUSTOM_TYPES.find((item) => item.id === id);
+    if (type) {
+      newCustomName = type.name;
+      newCustomDescription =
+        id === "append-suffix"
+          ? "每行末尾追加指定文本"
+          : id === "prepend-prefix"
+            ? "每行开头添加指定文本"
+            : id === "replace-text"
+              ? "全文替换指定文本"
+              : "去掉所有重复行（完整匹配）";
+    } else {
+      newCustomName = "";
+      newCustomDescription = "";
+    }
+  }
+
+  function addCustomButton() {
+    const type = CUSTOM_TYPES.find((item) => item.id === newCustomType);
+    if (!type) return;
+    if (
+      (type.id === "append-suffix" || type.id === "prepend-prefix") &&
+      !newCustomParam1.trim()
+    ) {
+      status = "请填写目标文本";
+      return;
+    }
+    if (
+      type.id === "replace-text" &&
+      (!newCustomParam1.trim() || !newCustomParam2.trim())
+    ) {
+      status = "请填写被替换文本和替换为文本";
+      return;
+    }
+    const button: TransformButton = {
+      id: `custom-${Date.now()}`,
+      name: newCustomName.trim() || type.name,
+      transform: "custom",
+      description: newCustomDescription.trim(),
+      visible: false,
+      customType: newCustomType,
+      param1: type.id === "remove-duplicate-lines" ? null : newCustomParam1.trim(),
+      param2: type.id === "replace-text" ? newCustomParam2.trim() : null,
+    };
+    scheduleSave({ ...config, buttons: [...config.buttons, button] });
+    newCustomType = "";
+    newCustomParam1 = "";
+    newCustomParam2 = "";
+    newCustomName = "";
+    newCustomDescription = "";
+  }
+
+  function updateButtonParam1(index: number, value: string) {
+    const buttons = config.buttons.map((item, i) =>
+      i === index ? { ...item, param1: value.trim() } : item,
+    );
+    scheduleSave({ ...config, buttons });
+  }
+
+  function updateButtonParam2(index: number, value: string) {
+    const buttons = config.buttons.map((item, i) =>
+      i === index ? { ...item, param2: value.trim() } : item,
+    );
+    scheduleSave({ ...config, buttons });
+  }
+
   function restoreDefaultButtons() {
     scheduleSave({ ...config, buttons: DEFAULT_BUTTONS.map((b) => ({ ...b })) });
   }
@@ -419,26 +508,58 @@
                 ⠿
               </span>
               <span class="index">{index + 1}</span>
-              <div class="button-fields">
-                <input
-                  type="text"
-                  value={button.name}
-                  maxlength="8"
-                  placeholder="名称（≤8 字）"
-                  onchange={(e) =>
-                    updateButtonName(index, (e.currentTarget as HTMLInputElement).value)}
-                />
-                <input
-                  type="text"
-                  value={button.description}
-                  maxlength="60"
-                  placeholder="说明（选填）"
-                  onchange={(e) =>
-                    updateButtonDescription(
-                      index,
-                      (e.currentTarget as HTMLInputElement).value,
-                    )}
-                />
+              <div class="item-main">
+                <div class="item-fields">
+                  <input
+                    type="text"
+                    value={button.name}
+                    maxlength="8"
+                    placeholder="名称（≤8 字）"
+                    onchange={(e) =>
+                      updateButtonName(index, (e.currentTarget as HTMLInputElement).value)}
+                  />
+                  <input
+                    type="text"
+                    value={button.description}
+                    maxlength="60"
+                    placeholder="说明（选填）"
+                    onchange={(e) =>
+                      updateButtonDescription(
+                        index,
+                        (e.currentTarget as HTMLInputElement).value,
+                      )}
+                  />
+                  {#if button.transform === "custom"}
+                    {#if button.customType !== "remove-duplicate-lines"}
+                      <input
+                        class="param-input"
+                        type="text"
+                        value={button.param1 ?? ""}
+                        maxlength="60"
+                        placeholder={customParamLabel(button.customType, true)}
+                        onchange={(e) =>
+                          updateButtonParam1(
+                            index,
+                            (e.currentTarget as HTMLInputElement).value,
+                          )}
+                      />
+                    {/if}
+                    {#if button.customType === "replace-text"}
+                      <input
+                        class="param-input"
+                        type="text"
+                        value={button.param2 ?? ""}
+                        maxlength="60"
+                        placeholder="替换为文本"
+                        onchange={(e) =>
+                          updateButtonParam2(
+                            index,
+                            (e.currentTarget as HTMLInputElement).value,
+                          )}
+                      />
+                    {/if}
+                  {/if}
+                </div>
               </div>
               <label class="visibility-toggle" title="显示/隐藏">
                 <input
@@ -500,6 +621,46 @@
       </button>
     </div>
 
+    <div class="add-row custom-add-row">
+      <select value={newCustomType} onchange={onCustomTypeChange}>
+        <option value="" disabled>自定义类型</option>
+        {#each CUSTOM_TYPES as type (type.id)}
+          <option value={type.id}>{type.name}</option>
+        {/each}
+      </select>
+      <input
+        type="text"
+        placeholder="名称（默认用类型名）"
+        maxlength="8"
+        bind:value={newCustomName}
+      />
+      <input
+        type="text"
+        placeholder="说明（选填）"
+        maxlength="60"
+        bind:value={newCustomDescription}
+      />
+      {#if newCustomType && newCustomType !== "remove-duplicate-lines"}
+        <input
+          type="text"
+          placeholder={customParamLabel(newCustomType, true)}
+          maxlength="60"
+          bind:value={newCustomParam1}
+        />
+      {/if}
+      {#if newCustomType === "replace-text"}
+        <input
+          type="text"
+          placeholder="替换为文本"
+          maxlength="60"
+          bind:value={newCustomParam2}
+        />
+      {/if}
+      <button type="button" class="ghost-button" onclick={addCustomButton}>
+        添加自定义按钮
+      </button>
+    </div>
+
     <button type="button" class="ghost-button" onclick={requestRestoreDefaultButtons}>
       恢复默认按钮
     </button>
@@ -552,11 +713,11 @@
         <input
           id="opacity"
           type="range"
-          min="20"
+          min="0"
           max="100"
           value={config.opacity}
           oninput={(e) =>
-            numericInput(e, 20, 100, (v) => updateAppearance({ opacity: v }))}
+            numericInput(e, 0, 100, (v) => updateAppearance({ opacity: v }))}
         />
         <span class="range-value">{config.opacity}%</span>
       </div>
@@ -910,14 +1071,30 @@
     flex: none;
   }
 
-  .button-fields {
+  .item-fields {
     display: flex;
-    gap: 8px;
-    flex: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
   }
 
-  .button-fields input {
-    width: 150px;
+  .item-fields input {
+    width: 130px;
+    padding: 4px 6px;
+    border: 1px solid var(--bar-border);
+    border-radius: 4px;
+    background-color: var(--control-bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .item-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .param-input {
+    width: 130px;
     padding: 4px 6px;
     border: 1px solid var(--bar-border);
     border-radius: 4px;
@@ -980,6 +1157,10 @@
   .add-row select {
     width: 180px;
     flex: none;
+  }
+
+  .custom-add-row {
+    flex-wrap: wrap;
   }
 
   .add-row input:first-of-type {

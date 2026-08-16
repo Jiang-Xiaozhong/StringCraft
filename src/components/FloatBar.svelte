@@ -210,7 +210,11 @@
     if (activeId) return; // 执行期间忽略重复点击
     activeId = button.id;
     try {
-      const message = await executeButton(button.transform);
+      const message = await executeButton(button.transform, {
+        customType: button.customType ?? null,
+        param1: button.param1 ?? null,
+        param2: button.param2 ?? null,
+      });
       showBubble(message);
     } catch (err) {
       showBubble(String(err));

@@ -12,7 +12,13 @@ use tauri::{AppHandle, Manager};
 const MAX_SELECTION_BYTES: usize = 1024 * 1024;
 
 /// 执行完整替换流程，返回面向用户的中文提示。
-pub fn replace_selection(app: &AppHandle, transform_id: &str) -> Result<String, String> {
+pub fn replace_selection(
+    app: &AppHandle,
+    transform_id: &str,
+    custom_type: Option<String>,
+    param1: Option<String>,
+    param2: Option<String>,
+) -> Result<String, String> {
     let (restore_enabled, delay_ms) = {
         let state = app.state::<ConfigState>();
         let config = state.0.lock().map_err(|e| e.to_string())?;
@@ -43,8 +49,16 @@ pub fn replace_selection(app: &AppHandle, transform_id: &str) -> Result<String, 
         return Err("未检测到选中文本".to_string());
     }
 
-    // 4. 转换
-    let result = transform::transform(&selected, transform_id);
+    // 4. 转换（自定义按钮走自定义调度）
+    let result = match custom_type.as_deref() {
+        Some(custom_type) => transform::transform_custom(
+            &selected,
+            custom_type,
+            param1.as_deref(),
+            param2.as_deref(),
+        ),
+        None => transform::transform(&selected, transform_id),
+    };
 
     // 选中文本过大：不自动替换，仅将结果放入剪贴板并提示
     if selected.len() > MAX_SELECTION_BYTES {

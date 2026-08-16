@@ -4,6 +4,9 @@ export interface TransformButton {
   description: string;
   transform: string;
   visible: boolean;
+  customType?: string | null;
+  param1?: string | null;
+  param2?: string | null;
 }
 
 export interface WindowPosition {

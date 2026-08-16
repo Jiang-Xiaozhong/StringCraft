@@ -33,6 +33,18 @@ export async function showSettingsWindow(): Promise<void> {
   await invoke("open_settings");
 }
 
-export async function executeButton(transformId: string): Promise<string> {
-  return invoke<string>("execute_button", { transformId });
+export async function executeButton(
+  transformId: string,
+  custom?: {
+    customType?: string | null;
+    param1?: string | null;
+    param2?: string | null;
+  },
+): Promise<string> {
+  return invoke<string>("execute_button", {
+    transformId,
+    customType: custom?.customType ?? null,
+    param1: custom?.param1 ?? null,
+    param2: custom?.param2 ?? null,
+  });
 }

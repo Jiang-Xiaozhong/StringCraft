@@ -429,6 +429,106 @@ fn parse_rmb_integer(s: &str) -> Option<u64> {
     Some(total + section + number)
 }
 
+/// 按行追加后缀：保留换行，CRLF 保持，行内容末尾添加后缀。
+fn append_suffix(text: &str, suffix: &str) -> String {
+    let parts: Vec<&str> = text.split('\n').collect();
+    let ends_with_newline = text.ends_with('\n');
+    let mut out = String::with_capacity(text.len() + suffix.len() * parts.len());
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        if ends_with_newline && i == parts.len() - 1 {
+            out.push_str(part);
+            continue;
+        }
+        let content = part.strip_suffix('\r').unwrap_or(part);
+        out.push_str(content);
+        out.push_str(suffix);
+        if part.ends_with('\r') {
+            out.push('\r');
+        }
+    }
+    out
+}
+
+/// 按行添加前缀：保留换行，CRLF 保持，行内容开头添加前缀。
+fn prepend_prefix(text: &str, prefix: &str) -> String {
+    let parts: Vec<&str> = text.split('\n').collect();
+    let ends_with_newline = text.ends_with('\n');
+    let mut out = String::with_capacity(text.len() + prefix.len() * parts.len());
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        if ends_with_newline && i == parts.len() - 1 {
+            out.push_str(part);
+            continue;
+        }
+        let content = part.strip_suffix('\r').unwrap_or(part);
+        out.push_str(prefix);
+        out.push_str(content);
+        if part.ends_with('\r') {
+            out.push('\r');
+        }
+    }
+    out
+}
+
+/// 全文替换（区分大小写、非正则）；被替换文本为空时原样返回。
+fn replace_all(text: &str, from: &str, to: &str) -> String {
+    if from.is_empty() {
+        text.to_string()
+    } else {
+        text.replace(from, to)
+    }
+}
+
+/// 去重复行：完整匹配，保留首次出现，顺序不变。
+fn remove_duplicate_lines(text: &str) -> String {
+    let parts: Vec<&str> = text.split('\n').collect();
+    let ends_with_newline = text.ends_with('\n');
+    let mut seen = std::collections::HashSet::new();
+    let mut kept: Vec<String> = Vec::new();
+    for (i, part) in parts.iter().enumerate() {
+        if ends_with_newline && i == parts.len() - 1 {
+            continue;
+        }
+        let content = part.strip_suffix('\r').unwrap_or(part);
+        if seen.insert(content.to_string()) {
+            kept.push(part.to_string());
+        }
+    }
+    let mut out = kept.join("\n");
+    if ends_with_newline {
+        out.push('\n');
+    }
+    out
+}
+
+/// 自定义按钮转换调度；未知类型或参数缺失时原样返回。
+pub fn transform_custom(
+    text: &str,
+    custom_type: &str,
+    param1: Option<&str>,
+    param2: Option<&str>,
+) -> String {
+    match custom_type {
+        "append-suffix" => param1
+            .map(|suffix| append_suffix(text, suffix))
+            .unwrap_or_else(|| text.to_string()),
+        "prepend-prefix" => param1
+            .map(|prefix| prepend_prefix(text, prefix))
+            .unwrap_or_else(|| text.to_string()),
+        "replace-text" => match (param1, param2) {
+            (Some(from), Some(to)) => replace_all(text, from, to),
+            _ => text.to_string(),
+        },
+        "remove-duplicate-lines" => remove_duplicate_lines(text),
+        _ => text.to_string(),
+    }
+}
+
 /// 按内置转换 id 执行转换；未知 id 原样返回。
 pub fn transform(text: &str, transform_id: &str) -> String {
     match transform_id {
@@ -643,5 +743,30 @@ mod tests {
         assert_eq!(transform("壹万元整", "rmb-to-number"), "10000");
         assert_eq!(transform("伍角", "rmb-to-number"), "0.5");
         assert_eq!(transform("非法输入", "rmb-to-number"), "非法输入");
+    }
+
+    #[test]
+    fn custom_transforms() {
+        assert_eq!(
+            transform_custom("a\nb", "append-suffix", Some("!"), None),
+            "a!\nb!"
+        );
+        assert_eq!(
+            transform_custom("a\nb", "prepend-prefix", Some(">"), None),
+            ">a\n>b"
+        );
+        assert_eq!(
+            transform_custom("aab aa", "replace-text", Some("aa"), Some("bb")),
+            "bbb bb"
+        );
+        assert_eq!(
+            transform_custom("a\nb\na\nb", "remove-duplicate-lines", None, None),
+            "a\nb"
+        );
+        assert_eq!(transform_custom("x", "unknown", None, None), "x");
+        assert_eq!(
+            transform_custom("a\r\nb", "append-suffix", Some("!"), None),
+            "a!\r\nb!"
+        );
     }
 }

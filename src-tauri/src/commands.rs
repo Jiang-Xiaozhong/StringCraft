@@ -1,4 +1,4 @@
-use crate::config::{self, AppConfig, ConfigState, WindowPosition};
+use crate::config::{self, AppConfig, ConfigState, StartupNotice, WindowPosition};
 use crate::{hotkey, logging, selection, transform, update, FLOAT_BAR_LABEL};
 use std::fs;
 use tauri::{AppHandle, Emitter, Manager};
@@ -11,6 +11,13 @@ pub fn get_config(app: AppHandle) -> Result<AppConfig, String> {
         .lock()
         .map_err(|e| e.to_string())
         .map(|guard| guard.clone())
+}
+
+/// 读取并清除启动时的一次性提示。
+#[tauri::command]
+pub fn take_startup_notice(app: AppHandle) -> Option<String> {
+    let state = app.state::<StartupNotice>();
+    state.0.lock().ok().and_then(|mut guard| guard.take())
 }
 
 /// 保存配置：校验 → 应用快捷键/自启动变更 → 持久化 → 通知悬浮条即时刷新。

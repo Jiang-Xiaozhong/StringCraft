@@ -8,6 +8,9 @@ use std::{
 /// 全局配置状态，所有命令共享。
 pub struct ConfigState(pub Mutex<AppConfig>);
 
+/// 启动时的一次性提示（如快捷键注册失败），悬浮条加载后读取并清除。
+pub struct StartupNotice(pub Mutex<Option<String>>);
+
 const DEFAULT_BACKGROUND_COLOR: &str = "#DCEBFA";
 const DEFAULT_BACKGROUND_COLOR_DARK: &str = "#27384A";
 const BUTTON_GAP: u32 = 4;

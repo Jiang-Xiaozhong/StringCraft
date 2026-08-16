@@ -7,7 +7,7 @@ mod transform;
 mod tray;
 mod update;
 
-use crate::config::ConfigState;
+use crate::config::{ConfigState, StartupNotice};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -61,6 +61,7 @@ pub fn run() {
     let startup_hotkey = config.hotkey.clone();
     tauri::Builder::default()
         .manage(ConfigState(Mutex::new(config)))
+        .manage(StartupNotice(Mutex::new(None)))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 第二次启动（如双击快捷方式）只呼出悬浮条，不创建新实例
             show_float_bar(app);
@@ -86,6 +87,11 @@ pub fn run() {
                 Err(e) => {
                     eprintln!("[StringCraft] 全局快捷键注册失败：{e}");
                     logging::log_event(app.handle(), &format!("全局快捷键注册失败：{e}"));
+                    if let Some(notice) = app.try_state::<StartupNotice>() {
+                        if let Ok(mut guard) = notice.0.lock() {
+                            *guard = Some(format!("全局快捷键注册失败（可能被其他程序占用）：{e}"));
+                        }
+                    }
                 }
             }
 
@@ -109,6 +115,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
+            commands::take_startup_notice,
             commands::save_config,
             commands::apply_no_activate,
             commands::update_float_bar_position,

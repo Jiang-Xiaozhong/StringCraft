@@ -5,6 +5,10 @@ export async function getConfig(): Promise<AppConfig> {
   return invoke<AppConfig>("get_config");
 }
 
+export async function takeStartupNotice(): Promise<string | null> {
+  return invoke<string | null>("take_startup_notice");
+}
+
 export async function saveConfig(config: AppConfig): Promise<AppConfig> {
   return invoke<AppConfig>("save_config", { config });
 }

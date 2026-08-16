@@ -16,6 +16,7 @@
     saveFloatBarPosition,
     saveFloatBarWidth,
     showSettingsWindow,
+    takeStartupNotice,
   } from "../lib/api";
   import { DEFAULT_CONFIG } from "../lib/defaults";
   import { formatFloatMessage, t } from "../lib/i18n";
@@ -382,6 +383,8 @@
   async function loadInitial() {
     try {
       config = await getConfig();
+      const notice = await takeStartupNotice();
+      if (notice) showBubble(notice);
       await updateScreenConstraints();
       await applySize(config.toolbarWidth);
       await restorePosition();

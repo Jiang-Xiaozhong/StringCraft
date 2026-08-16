@@ -2,10 +2,10 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    App, Manager,
+    AppHandle, Manager,
 };
 
-pub fn create_tray(app: &App) -> tauri::Result<()> {
+pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
     let language = app
         .state::<crate::config::ConfigState>()
         .0
@@ -63,4 +63,10 @@ pub fn create_tray(app: &App) -> tauri::Result<()> {
         .build(app)?;
 
     Ok(())
+}
+
+/// 移除旧托盘并重建（切换语言后调用，使菜单文案即时更新）。
+pub fn rebuild_tray(app: &AppHandle) -> tauri::Result<()> {
+    let _ = app.remove_tray_by_id("main-tray");
+    create_tray(app)
 }

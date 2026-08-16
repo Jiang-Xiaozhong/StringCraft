@@ -17,7 +17,7 @@
   import alipayImg from "../assets/alipay.jpg";
   import wechatImg from "../assets/wechat.jpg";
   import { DEFAULT_CONFIG, getDefaultButtons } from "../lib/defaults";
-  import { t } from "../lib/i18n";
+  import { t, translateRustMessage } from "../lib/i18n";
   import { darkenHex, MACARON_COLORS, MORANDI_COLORS } from "../lib/theme";
   import type { AppConfig, TransformButton } from "../lib/types";
 
@@ -118,7 +118,7 @@
       config = await saveConfig({ ...latest, ...patch });
       status = tt("settings.save.saved");
     } catch (e) {
-      status = String(e);
+      status = translateRustMessage(config.language, String(e));
     }
   }
 
@@ -426,7 +426,7 @@
       if (!path) return;
       status = await exportConfigTo(path);
     } catch (e) {
-      status = String(e);
+      status = translateRustMessage(config.language, String(e));
     }
   }
 
@@ -441,7 +441,7 @@
       status = await importConfigFrom(path as string);
       config = await getConfig();
     } catch (e) {
-      status = String(e);
+      status = translateRustMessage(config.language, String(e));
     }
   }
 
@@ -454,7 +454,7 @@
         status = tt("settings.update.latest", { version: info.version ?? "0.1.0" });
       }
     } catch (e) {
-      status = String(e);
+      status = translateRustMessage(config.language, String(e));
     } finally {
       checkingUpdate = false;
     }
@@ -466,7 +466,7 @@
       updateReadyPath = await downloadUpdate(updateInfo.assetUrl);
       status = tt("settings.update.ready");
     } catch (e) {
-      status = String(e);
+      status = translateRustMessage(config.language, String(e));
     }
   }
 
@@ -475,7 +475,7 @@
     try {
       status = await installUpdate(updateReadyPath);
     } catch (e) {
-      status = String(e);
+      status = translateRustMessage(config.language, String(e));
     }
     updateReadyPath = null;
   }

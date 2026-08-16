@@ -106,7 +106,7 @@ pub fn run() {
                 });
             }
 
-            tray::create_tray(app)?;
+            tray::create_tray(app.handle())?;
             logging::log_event(app.handle(), "应用启动完成");
             update::start_update_checker(app.handle().clone());
             println!("[StringCraft] 托盘已创建");

@@ -65,12 +65,22 @@ pub struct WindowPosition {
 }
 
 fn button(id: &str, name: &str, transform: &str, description: &str) -> TransformButton {
+    button_visible(id, name, transform, description, true)
+}
+
+fn button_visible(
+    id: &str,
+    name: &str,
+    transform: &str,
+    description: &str,
+    visible: bool,
+) -> TransformButton {
     TransformButton {
         id: id.to_string(),
         name: name.to_string(),
         transform: transform.to_string(),
         description: description.to_string(),
-        visible: true,
+        visible,
     }
 }
 
@@ -113,7 +123,7 @@ fn min_toolbar_width(button_width: u32, button_height: u32) -> u32 {
 
 /// 20 个内置转换按钮：顺序固定，id 与显示文字解耦（对应需求 4.3）。
 pub fn default_buttons() -> Vec<TransformButton> {
-    vec![
+    let mut buttons = vec![
         button("upper", "AB", "upper", "所有字母转为大写"),
         button("lower", "ab", "lower", "所有字母转为小写"),
         button(
@@ -227,7 +237,29 @@ pub fn default_buttons() -> Vec<TransformButton> {
             "rmb-to-number",
             "人民币大写转数字",
         ),
-    ]
+    ];
+
+    // 23 个默认按钮全部保留在配置中；10 个常用按钮默认显示，其余默认隐藏。
+    for id in [
+        "space-to-hyphen",
+        "underscore-to-hyphen",
+        "hyphen-to-underscore",
+        "underscore-to-space",
+        "underscore-to-dot",
+        "dot-to-underscore",
+        "space-to-newline",
+        "newline-to-space",
+        "remove-spaces",
+        "remove-newlines",
+        "json-format",
+        "number-to-rmb",
+        "rmb-to-number",
+    ] {
+        if let Some(button) = buttons.iter_mut().find(|b| b.id == id) {
+            button.visible = false;
+        }
+    }
+    buttons
 }
 
 /// 配置文件的绝对路径：

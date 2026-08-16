@@ -21,6 +21,14 @@ export async function saveFloatBarWidth(width: number): Promise<void> {
   await invoke("update_float_bar_width", { width });
 }
 
+export async function exportConfigTo(path: string): Promise<string> {
+  return invoke<string>("export_config_to", { path });
+}
+
+export async function importConfigFrom(path: string): Promise<string> {
+  return invoke<string>("import_config_from", { path });
+}
+
 export async function showSettingsWindow(): Promise<void> {
   await invoke("open_settings");
 }

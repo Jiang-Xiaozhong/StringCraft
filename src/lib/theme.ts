@@ -17,6 +17,19 @@ export const MACARON_COLORS: MacaronColor[] = [
   { name: "燕麦灰", light: "#F1EDE8", dark: "#3B3733" },
 ];
 
+export const MORANDI_COLORS: MacaronColor[] = [
+  { name: "灰蓝", light: "#B7C4D1", dark: "#2B3642" },
+  { name: "灰粉", light: "#D8B8BC", dark: "#3E2D30" },
+  { name: "灰绿", light: "#B9C6B5", dark: "#2C3528" },
+  { name: "灰紫", light: "#C9BBD6", dark: "#332B3D" },
+  { name: "灰黄", light: "#D8CDB0", dark: "#3A3526" },
+  { name: "灰橙", light: "#D6B3A0", dark: "#3B2B22" },
+  { name: "灰棕", light: "#CBBBA9", dark: "#372F27" },
+  { name: "灰青", light: "#AFC9C5", dark: "#283A38" },
+  { name: "灰红", light: "#D4A6A0", dark: "#3D2826" },
+  { name: "灰米", light: "#D8D2C6", dark: "#37332E" },
+];
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
   import { flip } from "svelte/animate";
+  import { open, save } from "@tauri-apps/plugin-dialog";
   import { getCurrentWindow } from "@tauri-apps/api/window";
-  import { getConfig, saveConfig } from "../lib/api";
+  import { exportConfigTo, getConfig, importConfigFrom, saveConfig } from "../lib/api";
   import { DEFAULT_BUTTONS, DEFAULT_CONFIG } from "../lib/defaults";
-  import { darkenHex, MACARON_COLORS } from "../lib/theme";
+  import { darkenHex, MACARON_COLORS, MORANDI_COLORS } from "../lib/theme";
   import type { AppConfig, TransformButton } from "../lib/types";
 
   let config: AppConfig = $state(structuredClone(DEFAULT_CONFIG));
@@ -17,6 +18,7 @@
   let systemDark = $state(false);
   let draggingIndex: number | null = $state(null);
   let dragOverIndex: number | null = $state(null);
+  let showRestoreConfirm = $state(false);
   let dragOffsetY = $state(0);
   let dragPointerStartY = 0;
   let dragTargets: number[] = [];
@@ -265,6 +267,47 @@
     scheduleSave({ ...config, buttons: DEFAULT_BUTTONS.map((b) => ({ ...b })) });
   }
 
+  function requestRestoreDefaultButtons() {
+    showRestoreConfirm = true;
+  }
+
+  function confirmRestoreDefaultButtons() {
+    showRestoreConfirm = false;
+    restoreDefaultButtons();
+  }
+
+  function cancelRestoreDefaultButtons() {
+    showRestoreConfirm = false;
+  }
+
+  async function exportConfig() {
+    try {
+      const path = await save({
+        defaultPath: "stringcraft-config.json",
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (!path) return;
+      status = await exportConfigTo(path);
+    } catch (e) {
+      status = String(e);
+    }
+  }
+
+  async function importConfig() {
+    try {
+      const path = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+      if (!path) return;
+      status = await importConfigFrom(path as string);
+      config = await getConfig();
+    } catch (e) {
+      status = String(e);
+    }
+  }
+
   // ---------- 外观 / 通用 ----------
   function updateAppearance(patch: Partial<AppConfig>) {
     scheduleSave({ ...config, ...patch });
@@ -292,7 +335,7 @@
   }
 </script>
 
-<main class="settings-page">
+<main class="settings-page" oncontextmenu={(event) => event.preventDefault()}>
   <header class="settings-header">
     <h1>StringCraft 设置</h1>
     <div class="header-actions">
@@ -437,7 +480,7 @@
       </button>
     </div>
 
-    <button type="button" class="ghost-button" onclick={restoreDefaultButtons}>
+    <button type="button" class="ghost-button" onclick={requestRestoreDefaultButtons}>
       恢复默认按钮
     </button>
   </section>
@@ -446,27 +489,27 @@
     <h2>外观</h2>
     <div class="field-grid">
       <div class="field-row">
-        <label for="button-width">按钮宽度（40~200px）</label>
+        <label for="button-width">按钮宽度（20~200px）</label>
         <input
           id="button-width"
           type="number"
-          min="40"
+          min="20"
           max="200"
           value={config.buttonWidth}
           onchange={(e) =>
-            numericInput(e, 40, 200, (v) => updateAppearance({ buttonWidth: v }))}
+            numericInput(e, 20, 200, (v) => updateAppearance({ buttonWidth: v }))}
         />
       </div>
       <div class="field-row">
-        <label for="button-height">按钮高度（28~80px）</label>
+        <label for="button-height">按钮高度（10~80px）</label>
         <input
           id="button-height"
           type="number"
-          min="28"
+          min="10"
           max="80"
           value={config.buttonHeight}
           onchange={(e) =>
-            numericInput(e, 28, 80, (v) => updateAppearance({ buttonHeight: v }))}
+            numericInput(e, 10, 80, (v) => updateAppearance({ buttonHeight: v }))}
         />
       </div>
       <div class="field-row">
@@ -510,9 +553,24 @@
     </div>
 
     <div class="color-section">
-      <div class="color-section-title">背景颜色</div>
+      <div class="color-section-title">背景颜色 · 马卡龙色系</div>
       <div class="color-presets">
         {#each MACARON_COLORS as color (color.name)}
+          <button
+            type="button"
+            class="color-swatch"
+            class:selected={config.backgroundColor.toUpperCase() === color.light}
+            title={color.name}
+            style:background={color.light}
+            onclick={() => selectPreset(color)}
+          >
+            {color.name}
+          </button>
+        {/each}
+      </div>
+      <div class="color-section-title">背景颜色 · 莫兰迪色系</div>
+      <div class="color-presets">
+        {#each MORANDI_COLORS as color (color.name)}
           <button
             type="button"
             class="color-swatch"
@@ -577,6 +635,15 @@
       />
     </div>
     <div class="field-row">
+      <label for="config-import-export">配置导入/导出</label>
+      <button type="button" class="ghost-button" onclick={exportConfig}>
+        导出配置
+      </button>
+      <button type="button" class="ghost-button" onclick={importConfig}>
+        导入配置
+      </button>
+    </div>
+    <div class="field-row">
       <label for="delay">自动替换延迟（ms，20~1000，高级）</label>
       <input
         id="delay"
@@ -594,6 +661,33 @@
     <p>StringCraft v0.1.0 · M5 设置页</p>
     <p>有任何问题或建议请反馈至邮箱 <a href="mailto:jxzlh1208@163.com">jxzlh1208@163.com</a></p>
   </footer>
+
+  {#if showRestoreConfirm}
+    <div class="modal-backdrop" role="presentation" onpointerdown={cancelRestoreDefaultButtons}>
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        tabindex="0"
+        onpointerdown={(event) => event.stopPropagation()}
+      >
+        <h3>恢复默认按钮</h3>
+        <p>确定要恢复为默认的 23 个内置按钮吗？当前按钮列表将被替换。</p>
+        <div class="modal-actions">
+          <button type="button" class="ghost-button" onclick={cancelRestoreDefaultButtons}>
+            取消
+          </button>
+          <button
+            type="button"
+            class="ghost-button danger"
+            onclick={confirmRestoreDefaultButtons}
+          >
+            确认恢复
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </main>
 
 <style>
@@ -645,6 +739,11 @@
 
   .ghost-button:hover {
     background: var(--button-bg-hover);
+  }
+
+  .ghost-button.danger {
+    color: var(--danger);
+    border-color: var(--danger);
   }
 
   .settings-section {
@@ -981,5 +1080,45 @@
 
   .settings-footer a:hover {
     text-decoration: underline;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .modal {
+    width: 340px;
+    max-width: calc(100vw - 48px);
+    padding: 18px 20px;
+    border: 1px solid var(--bar-border);
+    border-radius: 10px;
+    background: var(--settings-bg);
+    color: var(--text);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  }
+
+  .modal h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .modal p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
   }
 </style>

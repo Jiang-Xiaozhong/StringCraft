@@ -206,6 +206,229 @@ fn remove_newlines(text: &str) -> String {
     text.chars().filter(|c| *c != '\n' && *c != '\r').collect()
 }
 
+/// JSON 格式化：合法 JSON 按 2 空格缩进输出，保持字段顺序；非法输入原样返回。
+fn json_format(text: &str) -> String {
+    match serde_json::from_str::<serde_json::Value>(text) {
+        Ok(value) => serde_json::to_string_pretty(&value).unwrap_or_else(|_| text.to_string()),
+        Err(_) => text.to_string(),
+    }
+}
+
+const RMB_DIGITS: [char; 10] = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+const RMB_UNITS: [char; 4] = ['\0', '拾', '佰', '仟'];
+const RMB_BIG_UNITS: [&str; 3] = ["", "万", "亿"];
+
+/// 数字转人民币大写：支持 0~999999999999.99（千亿以内），非法输入返回 None。
+fn number_to_rmb_uppercase(text: &str) -> Option<String> {
+    let input = text.trim();
+    if input.is_empty() || input.starts_with('-') {
+        return None;
+    }
+
+    let (int_part, dec_part) = match input.split_once('.') {
+        Some((i, d)) => (i, Some(d)),
+        None => (input, None),
+    };
+    if int_part.is_empty() || !int_part.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let integer = int_part.trim_start_matches('0');
+    if integer.len() > 12 {
+        return None;
+    }
+    let integer = if integer.is_empty() { "0" } else { integer };
+
+    let (jiao, fen) = match dec_part {
+        Some(d) => {
+            if d.is_empty() || !d.chars().all(|c| c.is_ascii_digit()) || d.len() > 2 {
+                return None;
+            }
+            let mut padded = d.to_string();
+            while padded.len() < 2 {
+                padded.push('0');
+            }
+            let mut chars = padded.chars();
+            (
+                chars.next().unwrap().to_digit(10).unwrap(),
+                chars.next().unwrap().to_digit(10).unwrap(),
+            )
+        }
+        None => (0, 0),
+    };
+
+    let mut out = format!("{}元", integer_to_rmb(integer));
+    if jiao == 0 && fen == 0 {
+        out.push('整');
+    } else {
+        if jiao > 0 {
+            out.push(RMB_DIGITS[jiao as usize]);
+            out.push('角');
+        } else if fen > 0 {
+            out.push('零');
+        }
+        if fen > 0 {
+            out.push(RMB_DIGITS[fen as usize]);
+            out.push('分');
+        }
+    }
+    Some(out)
+}
+
+/// 整数部分转中文大写，支持最多 12 位（千亿以内）。
+fn integer_to_rmb(integer: &str) -> String {
+    let width = integer.len().div_ceil(4) * 4;
+    let padded = format!("{integer:0>width$}");
+    let sections: Vec<&str> = padded
+        .as_bytes()
+        .chunks(4)
+        .map(|chunk| std::str::from_utf8(chunk).unwrap())
+        .collect();
+
+    let mut result = String::new();
+    let mut need_zero = false;
+    let count = sections.len();
+    for (i, section) in sections.iter().enumerate() {
+        let value: u32 = section.parse().unwrap_or(0);
+        let big_index = count - 1 - i;
+        if value == 0 {
+            need_zero = true;
+            continue;
+        }
+        if need_zero && !result.is_empty() && !result.ends_with('零') {
+            result.push('零');
+        }
+        // 低位段以 0 开头时补零，如 10001 → 壹万零壹
+        if section.starts_with('0') && !result.is_empty() && !result.ends_with('零') {
+            result.push('零');
+        }
+        need_zero = false;
+        result.push_str(&four_digit_to_rmb(section));
+        result.push_str(RMB_BIG_UNITS[big_index]);
+    }
+    if result.is_empty() {
+        result.push('零');
+    }
+    result
+}
+
+/// 4 位数字段转中文大写，如 "1234" → 壹仟贰佰叁拾肆。
+fn four_digit_to_rmb(section: &str) -> String {
+    let mut result = String::new();
+    let mut zero = false;
+    for (i, c) in section.chars().enumerate() {
+        let digit = c.to_digit(10).unwrap() as usize;
+        if digit == 0 {
+            zero = true;
+        } else {
+            if zero && !result.is_empty() {
+                result.push('零');
+            }
+            zero = false;
+            result.push(RMB_DIGITS[digit]);
+            if 3 - i > 0 {
+                result.push(RMB_UNITS[3 - i]);
+            }
+        }
+    }
+    result
+}
+
+fn rmb_digit_value(c: char) -> Option<u32> {
+    RMB_DIGITS.iter().position(|&d| d == c).map(|i| i as u32)
+}
+
+/// 人民币大写转数字：支持“元/角/分/整、零壹贰叁肆伍陆柒捌玖、拾佰仟万亿”写法，非法输入返回 None。
+fn rmb_uppercase_to_number(text: &str) -> Option<String> {
+    let input = text.trim();
+    if input.is_empty() {
+        return None;
+    }
+
+    let (yuan_part, dec_part) = match input.find('元') {
+        Some(idx) => (&input[..idx], &input[idx + '元'.len_utf8()..]),
+        None => ("", input),
+    };
+    let integer = parse_rmb_integer(yuan_part)?;
+
+    let mut jiao = 0u32;
+    let mut fen = 0u32;
+    let mut chars = dec_part.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '整' || c == '零' {
+            continue;
+        }
+        let digit = rmb_digit_value(c)?;
+        match chars.next() {
+            Some('角') => jiao = digit,
+            Some('分') => fen = digit,
+            _ => return None,
+        }
+    }
+
+    let mut out = integer.to_string();
+    if jiao != 0 || fen != 0 {
+        out.push('.');
+        out.push(char::from_digit(jiao, 10)?);
+        out.push(char::from_digit(fen, 10)?);
+        if fen == 0 {
+            out.pop();
+        }
+    }
+    Some(out)
+}
+
+/// 解析中文数字整数部分，返回数值。
+fn parse_rmb_integer(s: &str) -> Option<u64> {
+    if s.is_empty() {
+        return Some(0);
+    }
+    let mut total: u64 = 0;
+    let mut section: u64 = 0;
+    let mut number: u64 = 0;
+    let mut has_value = false;
+    for c in s.chars() {
+        if let Some(d) = rmb_digit_value(c) {
+            number = d as u64;
+            has_value = true;
+        } else {
+            let unit = match c {
+                '拾' => 10u64,
+                '佰' => 100,
+                '仟' => 1000,
+                '万' => 10_000,
+                '亿' => 100_000_000,
+                _ => return None,
+            };
+            if number == 0 && !has_value {
+                number = 1; // “拾”开头表示一拾
+            }
+            match c {
+                '拾' | '佰' | '仟' => {
+                    section += number * unit;
+                    number = 0;
+                    has_value = true;
+                }
+                '万' => {
+                    section += number;
+                    total += section * unit;
+                    section = 0;
+                    number = 0;
+                    has_value = true;
+                }
+                '亿' => {
+                    section += number;
+                    total += section * unit;
+                    section = 0;
+                    number = 0;
+                    has_value = true;
+                }
+                _ => {}
+            }
+        }
+    }
+    Some(total + section + number)
+}
+
 /// 按内置转换 id 执行转换；未知 id 原样返回。
 pub fn transform(text: &str, transform_id: &str) -> String {
     match transform_id {
@@ -229,6 +452,9 @@ pub fn transform(text: &str, transform_id: &str) -> String {
         "remove-symbols" => remove_symbols(text),
         "remove-spaces" => remove_spaces(text),
         "remove-newlines" => remove_newlines(text),
+        "json-format" => json_format(text),
+        "number-to-rmb" => number_to_rmb_uppercase(text).unwrap_or_else(|| text.to_string()),
+        "rmb-to-number" => rmb_uppercase_to_number(text).unwrap_or_else(|| text.to_string()),
         _ => text.to_string(),
     }
 }
@@ -257,6 +483,9 @@ pub fn is_known_transform(transform_id: &str) -> bool {
             | "remove-symbols"
             | "remove-spaces"
             | "remove-newlines"
+            | "json-format"
+            | "number-to-rmb"
+            | "rmb-to-number"
     )
 }
 
@@ -378,5 +607,41 @@ mod tests {
         assert_eq!(transform("", "upper"), "");
         assert_eq!(transform("abc", "unknown-id"), "abc");
         assert_eq!(transform("hello", "upper"), "HELLO");
+    }
+
+    #[test]
+    fn json_formatting() {
+        let compact = r#"{"sites":{"site":[{"id":"1","name":"菜鸟教程","url":"www.runoob.com"}]}}"#;
+        let pretty = transform(compact, "json-format");
+        assert!(pretty.contains("\n  \"sites\""));
+        assert!(pretty.contains("\"name\": \"菜鸟教程\""));
+        assert_eq!(transform("not json", "json-format"), "not json");
+
+        let ordered = transform(r#"{"b":1,"a":2}"#, "json-format");
+        assert!(ordered.find("\"b\"").unwrap() < ordered.find("\"a\"").unwrap());
+    }
+
+    #[test]
+    fn number_to_rmb() {
+        assert_eq!(
+            transform("1234.56", "number-to-rmb"),
+            "壹仟贰佰叁拾肆元伍角陆分"
+        );
+        assert_eq!(transform("0", "number-to-rmb"), "零元整");
+        assert_eq!(transform("100000000", "number-to-rmb"), "壹亿元整");
+        assert_eq!(transform("0.05", "number-to-rmb"), "零元零伍分");
+        assert_eq!(transform("abc", "number-to-rmb"), "abc");
+    }
+
+    #[test]
+    fn rmb_to_number() {
+        assert_eq!(
+            transform("壹仟贰佰叁拾肆元伍角陆分", "rmb-to-number"),
+            "1234.56"
+        );
+        assert_eq!(transform("零元整", "rmb-to-number"), "0");
+        assert_eq!(transform("壹万元整", "rmb-to-number"), "10000");
+        assert_eq!(transform("伍角", "rmb-to-number"), "0.5");
+        assert_eq!(transform("非法输入", "rmb-to-number"), "非法输入");
     }
 }

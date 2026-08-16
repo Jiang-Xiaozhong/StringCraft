@@ -214,6 +214,19 @@ pub fn default_buttons() -> Vec<TransformButton> {
             "remove-newlines",
             "删除所有换行符",
         ),
+        button("json-format", "JSON", "json-format", "JSON 格式化"),
+        button(
+            "number-to-rmb",
+            "NumRMB",
+            "number-to-rmb",
+            "数字转人民币大写",
+        ),
+        button(
+            "rmb-to-number",
+            "RMBNum",
+            "rmb-to-number",
+            "人民币大写转数字",
+        ),
     ]
 }
 
@@ -284,8 +297,8 @@ fn save_to_path(config: &AppConfig, path: &Path) -> Result<(), String> {
 
 /// 数值取边界、非法枚举回退默认。
 pub fn normalize(config: &mut AppConfig) {
-    config.button_width = config.button_width.clamp(40, 200);
-    config.button_height = config.button_height.clamp(28, 80);
+    config.button_width = config.button_width.clamp(20, 200);
+    config.button_height = config.button_height.clamp(10, 80);
     config.font_size = config.font_size.clamp(10, 24);
     config.toolbar_width = config.toolbar_width.clamp(
         min_toolbar_width(config.button_width, config.button_height),

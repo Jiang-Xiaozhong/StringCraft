@@ -69,6 +69,7 @@ pub fn run() {
             Some(vec!["--autostart"]),
         ))
         .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
             println!("[StringCraft] 配置已加载，快捷键：{startup_hotkey}");
 
@@ -99,6 +100,8 @@ pub fn run() {
             commands::apply_no_activate,
             commands::update_float_bar_position,
             commands::update_float_bar_width,
+            commands::export_config_to,
+            commands::import_config_from,
             commands::open_settings,
             commands::execute_button
         ])

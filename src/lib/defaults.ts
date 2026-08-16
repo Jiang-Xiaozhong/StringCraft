@@ -21,6 +21,9 @@ export const DEFAULT_BUTTONS: TransformButton[] = [
   { id: "remove-symbols", name: "NoSym", transform: "remove-symbols", description: "删除除 Unicode 字母、数字、空白外的所有字符", visible: true },
   { id: "remove-spaces", name: "NoSp", transform: "remove-spaces", description: "删除所有空格字符", visible: true },
   { id: "remove-newlines", name: "NoNl", transform: "remove-newlines", description: "删除所有换行符", visible: true },
+  { id: "json-format", name: "JSON", transform: "json-format", description: "JSON 格式化", visible: true },
+  { id: "number-to-rmb", name: "NumRMB", transform: "number-to-rmb", description: "数字转人民币大写", visible: true },
+  { id: "rmb-to-number", name: "RMBNum", transform: "rmb-to-number", description: "人民币大写转数字", visible: true },
 ];
 
 export const DEFAULT_CONFIG: AppConfig = {

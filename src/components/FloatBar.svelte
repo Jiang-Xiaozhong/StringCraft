@@ -78,7 +78,7 @@
   }
 
   function minBarWidth(): number {
-    const buttonWidth = clampNumber(config.buttonWidth, 40, 200);
+    const buttonWidth = clampNumber(config.buttonWidth, 20, 200);
     const size = actionSize();
     const actionWidthHorizontal = size * 2 + ACTION_GAP;
     return Math.max(
@@ -94,11 +94,11 @@
   }
 
   function actionSize(): number {
-    return clampNumber(config.buttonHeight, 28, 80);
+    return clampNumber(config.buttonHeight, 10, 80);
   }
 
   function rowsFor(width: number, horizontal: boolean): number {
-    const buttonWidth = clampNumber(config.buttonWidth, 40, 200);
+    const buttonWidth = clampNumber(config.buttonWidth, 20, 200);
     const area = buttonAreaWidth(width, horizontal);
     const perRow =
       area >= buttonWidth
@@ -112,7 +112,7 @@
     height: number;
     actionsHorizontal: boolean;
   } {
-    const buttonHeight = clampNumber(config.buttonHeight, 28, 80);
+    const buttonHeight = clampNumber(config.buttonHeight, 10, 80);
     const horizontalRows = rowsFor(width, true);
     const actionsHorizontal = horizontalRows <= 1;
     const rows = actionsHorizontal ? horizontalRows : rowsFor(width, false);

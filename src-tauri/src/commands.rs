@@ -1,5 +1,6 @@
 use crate::config::{self, AppConfig, ConfigState, WindowPosition};
 use crate::{hotkey, logging, selection, transform, FLOAT_BAR_LABEL};
+use std::fs;
 use tauri::{AppHandle, Emitter, Manager};
 
 #[tauri::command]
@@ -112,6 +113,43 @@ pub fn update_float_bar_width(app: AppHandle, width: u32) -> Result<(), String> 
     }
     logging::log_event(&app, "悬浮条宽度已保存");
     Ok(())
+}
+
+/// 导出当前配置到指定路径（路径由前端文件对话框选择）。
+#[tauri::command]
+pub fn export_config_to(app: AppHandle, path: String) -> Result<String, String> {
+    let state = app.state::<ConfigState>();
+    let config = state.0.lock().map_err(|e| e.to_string())?.clone();
+    let json = serde_json::to_string_pretty(&config).map_err(|e| format!("序列化配置失败：{e}"))?;
+    fs::write(&path, json).map_err(|e| format!("写入配置文件失败：{e}"))?;
+    logging::log_event(&app, "配置已导出");
+    Ok("配置已导出".to_string())
+}
+
+/// 从指定路径导入配置，校验后覆盖当前配置并持久化。
+#[tauri::command]
+pub fn import_config_from(app: AppHandle, path: String) -> Result<String, String> {
+    let content = fs::read_to_string(&path).map_err(|e| format!("读取配置文件失败：{e}"))?;
+    let mut config: AppConfig =
+        serde_json::from_str(&content).map_err(|e| format!("配置格式不正确：{e}"))?;
+    config::normalize(&mut config);
+    config::validate(&config)?;
+
+    let state = app.state::<ConfigState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let old = guard.clone();
+    apply_hotkey_change(&app, &old, &config)?;
+    apply_autostart_change(&app, &old, &config)?;
+
+    if let Err(e) = config::save_config(&config) {
+        rollback(&app, &old, &config);
+        return Err(format!("保存配置失败：{e}"));
+    }
+    *guard = config;
+    drop(guard);
+    logging::log_event(&app, "配置已导入");
+    let _ = app.emit_to(FLOAT_BAR_LABEL, "config-changed", ());
+    Ok("配置已导入并生效".to_string())
 }
 
 /// 快捷键变更：先注册新键，成功后再注销旧键；失败则回滚并报错。

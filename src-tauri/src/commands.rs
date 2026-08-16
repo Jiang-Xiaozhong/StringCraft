@@ -193,6 +193,24 @@ pub fn install_update(path: String) -> Result<String, String> {
     update::launch_installer(&path)
 }
 
+/// 当前是否为 macOS 平台。
+#[tauri::command]
+pub fn is_macos() -> bool {
+    cfg!(target_os = "macos")
+}
+
+/// 查询 macOS 辅助功能权限状态。
+#[tauri::command]
+pub fn macos_accessibility_trusted() -> bool {
+    crate::macos::accessibility_trusted()
+}
+
+/// 打开 macOS 辅助功能权限设置页。
+#[tauri::command]
+pub fn open_macos_accessibility_settings() -> Result<(), String> {
+    crate::macos::open_accessibility_settings()
+}
+
 /// 快捷键变更：先注册新键，成功后再注销旧键；失败则回滚并报错。
 fn apply_hotkey_change(app: &AppHandle, old: &AppConfig, new: &AppConfig) -> Result<(), String> {
     if old.hotkey == new.hotkey {

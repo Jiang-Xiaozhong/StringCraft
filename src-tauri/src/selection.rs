@@ -25,6 +25,11 @@ pub fn replace_selection(
         (config.restore_clipboard, config.replace_delay_ms as u64)
     };
 
+    // macOS：未授权辅助功能时无法模拟按键，先给出明确引导。
+    if !crate::macos::accessibility_trusted() {
+        return Err("需要开启“辅助功能”权限，请在设置页开启".to_string());
+    }
+
     // 1. 保存当前剪贴板文本；非文本内容直接放弃，避免破坏剪贴板
     let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("无法访问剪贴板：{e}"))?;
     let backup = match clipboard.get_text() {
@@ -33,7 +38,7 @@ pub fn replace_selection(
     };
 
     // 2. 模拟 Ctrl+C 复制选中文本
-    send_shortcut(copy_key(), Key::C)?;
+    send_shortcut(copy_key(), letter_key('c'))?;
     std::thread::sleep(Duration::from_millis(delay_ms));
 
     // 3. 读取复制结果；与备份一致判定为未选中文本
@@ -72,7 +77,7 @@ pub fn replace_selection(
     clipboard
         .set_text(&result)
         .map_err(|e| format!("写入剪贴板失败：{e}"))?;
-    if let Err(e) = send_shortcut(copy_key(), Key::V) {
+    if let Err(e) = send_shortcut(copy_key(), letter_key('v')) {
         let restore_note = match restore_clipboard(&mut clipboard, backup.as_str()) {
             Ok(()) => "原剪贴板已恢复".to_string(),
             Err(_) => "且原剪贴板恢复失败，结果保留在剪贴板".to_string(),
@@ -107,6 +112,21 @@ fn copy_key() -> Key {
 #[cfg(not(target_os = "macos"))]
 fn copy_key() -> Key {
     Key::Control
+}
+
+/// 字母按键：macOS 的 `enigo::Key` 没有 `C`/`V` 变体，统一用 `Unicode` 表示。
+#[cfg(target_os = "macos")]
+fn letter_key(letter: char) -> Key {
+    Key::Unicode(letter)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn letter_key(letter: char) -> Key {
+    match letter {
+        'c' => Key::C,
+        'v' => Key::V,
+        _ => Key::Unicode(letter),
+    }
 }
 
 /// 模拟一次「修饰键 + 字母」快捷键。

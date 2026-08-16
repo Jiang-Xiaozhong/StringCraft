@@ -27,6 +27,28 @@
 - 最新版本：[GitHub Releases](https://github.com/Jiang-Xiaozhong/StringCraft-Releases/releases)
 - 安装包为 NSIS 安装程序，双击即可安装。
 
+## 未来 macOS 支持计划
+
+StringCraft 目前支持 Windows 10/11，macOS 版本正在适配中。
+
+计划中的 macOS 版本将支持：
+
+- 系统版本：macOS 10.13 及以上（Apple Silicon，M 系列）
+- 全局快捷键：`Cmd+Option+Space` 呼入/呼出悬浮条
+- 辅助功能权限：首次使用引导开启，自动替换需要该权限
+- 菜单栏托盘：呼出/隐藏悬浮条、打开设置、退出
+- 安装包：DMG 安装程序
+- 自动更新：支持检查更新与下载安装
+- 中英文切换、赞助等功能与 Windows 版本保持一致
+
+当前进度：
+
+- macOS 代码与云端构建验证已完成；
+- 正在准备 macOS 真机测试环境；
+- 测试通过后会第一时间在 Releases 发布 macOS 安装包，具体发布时间待定。
+
+> 说明：macOS 版本需要真机完成交互验证后才能正式发布，敬请期待。
+
 ## 隐私
 
 - 除“检查更新”外，应用没有任何网络请求。

@@ -1,7 +1,13 @@
 use tauri::AppHandle;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
-/// 默认快捷键：配置统一用 Ctrl 表示主修饰键（macOS 注册时映射为 Cmd）。
+/// 默认快捷键：Windows 用 Ctrl+Alt+Space，macOS 用 Cmd+Option+Space（需求 4.4）。
+#[cfg(target_os = "macos")]
+pub fn default_hotkey() -> &'static str {
+    "Cmd+Option+Space"
+}
+
+#[cfg(not(target_os = "macos"))]
 pub fn default_hotkey() -> &'static str {
     "Ctrl+Alt+Space"
 }
@@ -36,11 +42,13 @@ pub fn unregister(app: &AppHandle, hotkey: &str) -> Result<(), String> {
 }
 
 /// 配置统一用 Ctrl 表示主修饰键；macOS 注册时映射为 Cmd（需求 4.4）。
+#[cfg(target_os = "macos")]
 fn to_platform_hotkey(hotkey: &str) -> String {
-    #[cfg(target_os = "macos")]
-    if let Some(rest) = hotkey.strip_prefix("Ctrl+") {
-        return format!("Cmd+{rest}");
-    }
+    hotkey.replace("Ctrl", "Cmd").replace("Alt", "Option")
+}
+
+#[cfg(not(target_os = "macos"))]
+fn to_platform_hotkey(hotkey: &str) -> String {
     hotkey.to_string()
 }
 

@@ -2,6 +2,7 @@ mod commands;
 mod config;
 mod hotkey;
 mod logging;
+mod macos;
 mod selection;
 mod transform;
 mod tray;
@@ -125,6 +126,9 @@ pub fn run() {
             commands::check_for_update,
             commands::download_update,
             commands::install_update,
+            commands::is_macos,
+            commands::macos_accessibility_trusted,
+            commands::open_macos_accessibility_settings,
             commands::open_settings,
             commands::execute_button
         ])

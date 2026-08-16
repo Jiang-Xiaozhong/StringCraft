@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 
-const REPO_API: &str = "https://api.github.com/repos/Jiang-Xiaozhong/StringCraft/releases/latest";
+const REPO_API: &str =
+    "https://api.github.com/repos/Jiang-Xiaozhong/StringCraft-Releases/releases/latest";
 const CHECK_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

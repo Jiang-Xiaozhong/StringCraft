@@ -24,7 +24,7 @@
 
 ## 下载
 
-- 最新版本：[GitHub Releases](https://github.com/Jiang-Xiaozhong/StringCraft/releases)
+- 最新版本：[GitHub Releases](https://github.com/Jiang-Xiaozhong/StringCraft-Releases/releases)
 - 安装包为 NSIS 安装程序，双击即可安装。
 
 ## 隐私
@@ -33,7 +33,4 @@
 - 更新检查仅访问 GitHub Releases，不上传任何数据。
 - 被转换的文本只存在于内存，不写入日志、配置或磁盘。
 
-## 反馈
 
-有任何问题或建议，欢迎反馈至：jxzlh1208@163.com。
-如果 StringCraft 对你有帮助，可以在设置页请我喝杯咖啡/可乐，支持持续更新。

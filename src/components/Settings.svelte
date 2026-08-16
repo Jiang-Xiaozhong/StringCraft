@@ -243,6 +243,22 @@
     ),
   );
 
+  function applyTransformDefaults(id: string) {
+    newTransformId = id;
+    const source = DEFAULT_BUTTONS.find((item) => item.transform === id);
+    if (source) {
+      newName = source.name;
+      newDescription = source.description;
+    }
+  }
+
+  $effect(() => {
+    if (unusedTransforms.length === 0) return;
+    if (!unusedTransforms.some((item) => item.transform === newTransformId)) {
+      applyTransformDefaults(unusedTransforms[0].transform);
+    }
+  });
+
   function addButton() {
     const source = DEFAULT_BUTTONS.find((item) => item.transform === newTransformId);
     if (!source) return;
@@ -260,17 +276,11 @@
     const nextUnused = DEFAULT_BUTTONS.find(
       (source) => !nextButtons.some((item) => item.transform === source.transform),
     );
-    if (nextUnused) newTransformId = nextUnused.transform;
+    if (nextUnused) applyTransformDefaults(nextUnused.transform);
   }
 
   function onAddTransformChange(event: Event) {
-    const id = (event.currentTarget as HTMLSelectElement).value;
-    newTransformId = id;
-    const source = DEFAULT_BUTTONS.find((item) => item.transform === id);
-    if (source) {
-      newName = source.name;
-      newDescription = source.description;
-    }
+    applyTransformDefaults((event.currentTarget as HTMLSelectElement).value);
   }
 
   function restoreDefaultButtons() {

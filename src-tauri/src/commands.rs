@@ -40,6 +40,9 @@ pub fn save_config(app: AppHandle, mut config: AppConfig) -> Result<AppConfig, S
 
     *guard = config.clone();
     drop(guard);
+    if old.language != config.language {
+        let _ = crate::tray::rebuild_tray(&app);
+    }
     logging::log_event(&app, "配置已保存");
     let _ = app.emit_to(FLOAT_BAR_LABEL, "config-changed", ());
     Ok(config)

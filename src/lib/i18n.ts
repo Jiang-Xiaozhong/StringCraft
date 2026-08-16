@@ -69,7 +69,7 @@ const zh: Dict = {
   "settings.donation.show": "显示赞助",
   "settings.donation.alipay": "支付宝",
   "settings.donation.wechat": "微信",
-  "settings.footer.version": "StringCraft v0.1.1",
+  "settings.footer.version": "StringCraft v0.1.2",
   "settings.footer.feedback": "有任何问题或建议请反馈至邮箱 ",
   "color.樱花粉": "樱花粉",
   "color.蜜桃橙": "蜜桃橙",
@@ -181,7 +181,7 @@ const en: Dict = {
   "settings.donation.show": "Show Sponsor",
   "settings.donation.alipay": "Alipay",
   "settings.donation.wechat": "WeChat",
-  "settings.footer.version": "StringCraft v0.1.1",
+  "settings.footer.version": "StringCraft v0.1.2",
   "settings.footer.feedback": "Feedback or suggestions: ",
   "color.樱花粉": "Sakura Pink",
   "color.蜜桃橙": "Peach",
@@ -242,4 +242,38 @@ export function formatFloatMessage(lang: Language, message: string): string {
   const key = Object.keys(zh).find((k) => k.startsWith("floatbar.") && zh[k] === message);
   if (!key) return message;
   return dicts[lang][key] ?? message;
+}
+
+const RUST_PREFIXES: { zh: string; en: string }[] = [
+  { zh: "检查更新失败", en: "Update check failed" },
+  { zh: "下载更新失败", en: "Update download failed" },
+  { zh: "启动安装程序失败", en: "Failed to launch installer" },
+  { zh: "保存配置失败", en: "Failed to save config" },
+  { zh: "任务执行失败", en: "Task failed" },
+  { zh: "快捷键注册失败", en: "Hotkey registration failed" },
+  { zh: "全局快捷键注册失败", en: "Global hotkey registration failed" },
+  { zh: "读取配置文件失败", en: "Failed to read config file" },
+  { zh: "写入配置文件失败", en: "Failed to write config file" },
+  { zh: "配置格式不正确", en: "Invalid config format" },
+  { zh: "粘贴失败", en: "Paste failed" },
+  { zh: "写入剪贴板失败", en: "Failed to write clipboard" },
+  { zh: "无法访问剪贴板", en: "Cannot access clipboard" },
+  { zh: "键盘模拟初始化失败", en: "Failed to initialize keyboard" },
+  { zh: "创建临时目录失败", en: "Failed to create temp directory" },
+  { zh: "读取下载内容失败", en: "Failed to read download content" },
+  { zh: "解析更新信息失败", en: "Failed to parse update info" },
+  { zh: "读取更新信息失败", en: "Failed to read update info" },
+];
+
+/** 翻译 Rust 返回的中文提示：先精确匹配，再按前缀翻译并保留详情。 */
+export function translateRustMessage(lang: Language, message: string): string {
+  const exact = formatFloatMessage(lang, message);
+  if (exact !== message) return exact;
+  if (lang === "zh-CN") return message;
+  for (const prefix of RUST_PREFIXES) {
+    if (message.startsWith(prefix.zh)) {
+      return prefix.en + message.slice(prefix.zh.length);
+    }
+  }
+  return message;
 }

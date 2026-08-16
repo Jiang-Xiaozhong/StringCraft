@@ -19,7 +19,7 @@
     takeStartupNotice,
   } from "../lib/api";
   import { DEFAULT_CONFIG } from "../lib/defaults";
-  import { formatFloatMessage, t } from "../lib/i18n";
+  import { t, translateRustMessage } from "../lib/i18n";
   import { hexToRgba } from "../lib/theme";
   import type { AppConfig, TransformButton } from "../lib/types";
 
@@ -133,7 +133,7 @@
   }
 
   function showBubble(message: string) {
-    bubble = formatFloatMessage(config.language, message);
+    bubble = translateRustMessage(config.language, message);
     clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(() => {
       bubble = null;

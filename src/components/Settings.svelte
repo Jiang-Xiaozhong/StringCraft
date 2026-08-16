@@ -12,9 +12,9 @@
   let loadError: string | null = $state(null);
   let status: string | null = $state(null);
   let recording = $state(false);
-  let newTransformId = $state(DEFAULT_BUTTONS[0].transform);
-  let newName = $state(DEFAULT_BUTTONS[0].name);
-  let newDescription = $state(DEFAULT_BUTTONS[0].description);
+  let newTransformId = $state("");
+  let newName = $state("");
+  let newDescription = $state("");
   let systemDark = $state(false);
   let draggingIndex: number | null = $state(null);
   let dragOverIndex: number | null = $state(null);
@@ -252,13 +252,6 @@
     }
   }
 
-  $effect(() => {
-    if (unusedTransforms.length === 0) return;
-    if (!unusedTransforms.some((item) => item.transform === newTransformId)) {
-      applyTransformDefaults(unusedTransforms[0].transform);
-    }
-  });
-
   function addButton() {
     const source = DEFAULT_BUTTONS.find((item) => item.transform === newTransformId);
     if (!source) return;
@@ -270,13 +263,9 @@
       visible: true,
     };
     scheduleSave({ ...config, buttons: [...config.buttons, button] });
+    newTransformId = "";
     newName = "";
     newDescription = "";
-    const nextButtons = [...config.buttons, button];
-    const nextUnused = DEFAULT_BUTTONS.find(
-      (source) => !nextButtons.some((item) => item.transform === source.transform),
-    );
-    if (nextUnused) applyTransformDefaults(nextUnused.transform);
   }
 
   function onAddTransformChange(event: Event) {
@@ -469,6 +458,7 @@
         onchange={onAddTransformChange}
         disabled={unusedTransforms.length === 0}
       >
+        <option value="" disabled>请选择转换功能</option>
         {#each unusedTransforms as source (source.transform)}
           <option value={source.transform}>{source.name}</option>
         {/each}

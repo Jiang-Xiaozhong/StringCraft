@@ -101,13 +101,13 @@
 
   function scheduleSave(next: AppConfig) {
     clearTimeout(saveTimer);
-    status = "正在保存…";
+    status = tt("settings.save.saving");
     saveTimer = setTimeout(() => doSave(next), 350);
   }
 
   function scheduleQuickSave(next: AppConfig) {
     clearTimeout(saveTimer);
-    status = "正在保存…";
+    status = tt("settings.save.saving");
     saveTimer = setTimeout(() => doSave(next), 80);
   }
 
@@ -116,7 +116,7 @@
       const latest = await getConfig();
       const patch = diffConfig(config, next);
       config = await saveConfig({ ...latest, ...patch });
-      status = "已保存";
+      status = tt("settings.save.saved");
     } catch (e) {
       status = String(e);
     }
@@ -625,19 +625,19 @@
                   {/if}
                 </div>
               </div>
-              <label class="visibility-toggle" title="显示/隐藏">
+              <label class="visibility-toggle" title={tt("settings.buttons.showHide")}>
                 <input
                   type="checkbox"
                   checked={button.visible}
                   onchange={(e) =>
                     updateButtonVisible(index, (e.currentTarget as HTMLInputElement).checked)}
                 />
-                <span>显示</span>
+                <span>{tt("settings.buttons.show")}</span>
               </label>
               <button
                 type="button"
                 class="icon-button danger"
-                title="删除"
+                title={tt("settings.buttons.delete")}
                 onclick={() => removeButton(index)}
               >
                 ✕
@@ -659,7 +659,7 @@
       </select>
       <input
         type="text"
-        placeholder="名称（默认用功能名，≤8 字）"
+        placeholder={tt("settings.buttons.addName")}
         maxlength="8"
         bind:value={newName}
         onkeydown={(e) => {
@@ -668,7 +668,7 @@
       />
       <input
         type="text"
-        placeholder="说明（选填）"
+        placeholder={tt("settings.buttons.desc")}
         maxlength="60"
         bind:value={newDescription}
         onkeydown={(e) => {
@@ -808,11 +808,11 @@
             type="button"
             class="color-swatch"
             class:selected={config.backgroundColor.toUpperCase() === color.light}
-            title={color.name}
+            title={tt("color." + color.name)}
             style:background={color.light}
             onclick={() => selectPreset(color)}
           >
-            {color.name}
+            {tt("color." + color.name)}
           </button>
         {/each}
       </div>
@@ -823,11 +823,11 @@
             type="button"
             class="color-swatch"
             class:selected={config.backgroundColor.toUpperCase() === color.light}
-            title={color.name}
+            title={tt("color." + color.name)}
             style:background={color.light}
             onclick={() => selectPreset(color)}
           >
-            {color.name}
+            {tt("color." + color.name)}
           </button>
         {/each}
       </div>

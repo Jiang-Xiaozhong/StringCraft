@@ -52,6 +52,7 @@
 
   onDestroy(() => {
     media.removeEventListener("change", updateSystemDark);
+    window.removeEventListener("keydown", onHotkeyKeydown);
     clearTimeout(saveTimer);
   });
 
@@ -105,8 +106,10 @@
 
   // ---------- 快捷键 ----------
   function startRecording() {
+    if (recording) return;
     recording = true;
     status = "请按下新的组合键（需包含 Ctrl/Alt/Shift）…";
+    window.addEventListener("keydown", onHotkeyKeydown);
   }
 
   function onHotkeyKeydown(e: KeyboardEvent) {
@@ -127,6 +130,7 @@
     }
 
     recording = false;
+    window.removeEventListener("keydown", onHotkeyKeydown);
     scheduleSave({ ...config, hotkey: [...mods, key].join("+") });
   }
 
@@ -379,7 +383,6 @@
         value={config.hotkey}
         class:recording={recording}
         onclick={startRecording}
-        onkeydown={onHotkeyKeydown}
       />
       <button type="button" class="ghost-button" onclick={restoreDefaultHotkey}>
         恢复默认

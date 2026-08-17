@@ -37,22 +37,29 @@ pub fn replace_selection(
         Err(_) => return Err("剪贴板包含图片/文件等非文本内容，已放弃自动替换".to_string()),
     };
 
-    // 2. 模拟 Ctrl+C 复制选中文本
+    // 2. 先清空剪贴板再模拟 Ctrl+C：
+    //    复制后剪贴板为空则说明未选中；避免“备份与选中文字相同”造成误判。
+    clipboard
+        .set_text("")
+        .map_err(|e| format!("无法访问剪贴板：{e}"))?;
     send_shortcut(copy_key(), letter_key('c'))?;
     std::thread::sleep(Duration::from_millis(delay_ms));
 
-    // 3. 读取复制结果；与备份一致判定为未选中文本
-    let selected = match clipboard.get_text() {
-        Ok(text) => text,
-        Err(_) => {
+    // 3. 读取复制结果；为空时重试一次，仍为空判定为未选中文本。
+    let mut selected = clipboard.get_text().ok().filter(|text| !text.is_empty());
+    if selected.is_none() {
+        std::thread::sleep(Duration::from_millis(50));
+        send_shortcut(copy_key(), letter_key('c'))?;
+        std::thread::sleep(Duration::from_millis(delay_ms));
+        selected = clipboard.get_text().ok().filter(|text| !text.is_empty());
+    }
+    let selected = match selected {
+        Some(text) => text,
+        None => {
             let _ = restore_clipboard(&mut clipboard, backup.as_str());
-            return Err("复制到的内容不是文本，已放弃自动替换".to_string());
+            return Err("未检测到选中文本".to_string());
         }
     };
-    if selected == backup {
-        let _ = restore_clipboard(&mut clipboard, backup.as_str());
-        return Err("未检测到选中文本".to_string());
-    }
 
     // 4. 转换（自定义按钮走自定义调度）
     let result = match custom_type.as_deref() {

@@ -9,8 +9,8 @@
 - 技术栈：Tauri 2 + Rust 后端；前端 Svelte + TypeScript + Vite
 - 核心插件：tauri-plugin-global-shortcut / single-instance / autostart / clipboard-manager / store；arboard；enigo
 - 需求文档：[docs/需求方案.md](docs/需求方案.md)（v0.3 已定稿）
-- 开发阶段：M1~M6，见需求文档第 7 节
-- 远程仓库：https://github.com/Jiang-Xiaozhong/StringCraft.git（开发分支 dev，发布分支 main）
+- 开发阶段：M1~M9，见需求文档第 7 节
+- 远程仓库：https://github.com/Jiang-Xiaozhong/StringCraft.git（公开，开发与发布均使用 `main` 分支）
 - 语言约定：文档、开发日志、代码注释、commit 说明用中文；代码标识符用英文
 
 ## 多机协作总原则（最高优先级）
@@ -41,8 +41,8 @@
 - 一个逻辑单元完成后提交一次，至少每次工作结束前提交。
 - 提交信息采用 Conventional Commits，中文描述，前缀如：`feat:` `fix:` `docs:` `refactor:` `test:` `chore:` `wip:`。
 - 提交后立即 `git push`。
-- 单人项目默认直接在 `dev` 上开发；多任务并行时才使用 `codex/xxx` 短分支，完成后合并回 dev 并删除分支。
-- 发布正式版本时把 `dev` 合并到 `main`；`main` 只保留经过验证的发布代码。
+- 日常开发直接在 `main` 上提交；多任务并行时才使用 `codex/xxx` 短分支，完成后合并回 `main` 并删除分支。
+- 发布正式版本直接基于 `main` 打 tag 并发布；`main` 始终保留经过验证的代码。
 - 开工时如发现本地有未提交改动：先判断内容；属于上一步未完成的工作就按 `wip:` 提交并推送，再 pull，避免丢失或冲突。
 
 ## 质量门槛（提交前）

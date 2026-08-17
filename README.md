@@ -24,7 +24,7 @@
 
 ## 下载
 
-- 最新版本：[GitHub Releases](https://github.com/Jiang-Xiaozhong/StringCraft-Releases/releases)
+- 最新版本：[GitHub Releases](https://github.com/Jiang-Xiaozhong/StringCraft/releases)
 - 安装包为 NSIS 安装程序，双击即可安装。
 
 ## 未来 macOS 支持计划

@@ -673,7 +673,7 @@
         onchange={onAddTransformChange}
         disabled={unusedTransforms.length === 0}
       >
-        <option value="" disabled>{tt("settings.buttons.customType")}</option>
+        <option value="" disabled>{tt("settings.buttons.defaultButton")}</option>
         {#each unusedTransforms as source (source.transform)}
           <option value={source.transform}>{source.name}</option>
         {/each}
@@ -708,7 +708,7 @@
 
     <div class="add-row custom-add-row">
       <select value={newCustomType} onchange={onCustomTypeChange}>
-        <option value="" disabled>{tt("settings.buttons.customType")}</option>
+        <option value="" disabled>{tt("settings.buttons.customButton")}</option>
         {#each CUSTOM_TYPES as type (type.id)}
           <option value={type.id}>{tt(type.nameKey)}</option>
         {/each}

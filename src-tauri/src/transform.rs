@@ -72,14 +72,19 @@ fn sentence_case(text: &str) -> String {
     out
 }
 
-/// 按下划线/空格分词：首词转小写，后续词首字母大写、其余小写，删除分隔符。
+/// 按下划线/空格分词：首词转小写，后续词首字母大写、其余小写，删除分隔符；
+/// 换行保留，每行单独按驼峰规则处理。
 fn to_camel(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut word_start = true;
     let mut first_word = true;
     for c in text.chars() {
-        if c == '_' || c.is_whitespace() {
+        if c == '_' || is_space_char(c) {
             word_start = true;
+        } else if c == '\n' || c == '\r' {
+            out.push(c);
+            word_start = true;
+            first_word = true;
         } else if word_start {
             if first_word {
                 out.extend(c.to_lowercase());
@@ -651,6 +656,14 @@ mod tests {
     fn camel_case_conversions() {
         assert_eq!(transform("hello_world", "to-camel"), "helloWorld");
         assert_eq!(transform("hello world", "to-camel"), "helloWorld");
+        assert_eq!(
+            transform("hello_world\nfoo_bar", "to-camel"),
+            "helloWorld\nfooBar"
+        );
+        assert_eq!(
+            transform("hello_world\r\nfoo_bar", "to-camel"),
+            "helloWorld\r\nfooBar"
+        );
         assert_eq!(
             transform("helloWorld", "camel-to-underscore"),
             "hello_world"

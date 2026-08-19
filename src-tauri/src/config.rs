@@ -400,6 +400,13 @@ pub fn validate(config: &AppConfig) -> Result<(), String> {
                         return Err("文本替换需要填写被替换文本和替换为文本".to_string());
                     }
                 }
+                Some("prepend-append") => {
+                    if item.param1.as_deref().unwrap_or("").trim().is_empty()
+                        || item.param2.as_deref().unwrap_or("").trim().is_empty()
+                    {
+                        return Err("加前缀加后缀需要填写前缀文本和后缀文本".to_string());
+                    }
+                }
                 Some("remove-duplicate-lines") => {}
                 Some(_) => return Err("未知的自定义按钮类型".to_string()),
                 None => return Err("自定义按钮缺少类型".to_string()),

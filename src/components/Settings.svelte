@@ -55,6 +55,7 @@
   const CUSTOM_TYPES = [
     { id: "append-suffix", nameKey: "custom.appendSuffix", paramKey: "custom.suffixPlaceholder" },
     { id: "prepend-prefix", nameKey: "custom.prependPrefix", paramKey: "custom.prefixPlaceholder" },
+    { id: "prepend-append", nameKey: "custom.prependAppend", descKey: "custom.prependAppendDesc", paramKey: "custom.prefixPlaceholder", param2Key: "custom.suffixPlaceholder" },
     { id: "replace-text", nameKey: "custom.replaceText", paramKey: "custom.replaceFromPlaceholder", param2Key: "custom.replaceToPlaceholder" },
     { id: "remove-duplicate-lines", nameKey: "custom.removeDuplicateLines", paramKey: "" },
   ];
@@ -350,7 +351,7 @@
     const type = CUSTOM_TYPES.find((item) => item.id === id);
     if (type) {
       newCustomName = tt(type.nameKey);
-      newCustomDescription = tt(type.nameKey);
+      newCustomDescription = tt(type.descKey ?? type.nameKey);
     } else {
       newCustomName = "";
       newCustomDescription = "";
@@ -374,6 +375,13 @@
       status = "请填写被替换文本和替换为文本";
       return;
     }
+    if (
+      type.id === "prepend-append" &&
+      (!newCustomParam1.trim() || !newCustomParam2.trim())
+    ) {
+      status = "请填写前缀文本和后缀文本";
+      return;
+    }
     const button: TransformButton = {
       id: `custom-${Date.now()}`,
       name: newCustomName.trim() || tt(type.nameKey),
@@ -382,7 +390,10 @@
       visible: false,
       customType: newCustomType,
       param1: type.id === "remove-duplicate-lines" ? null : newCustomParam1.trim(),
-      param2: type.id === "replace-text" ? newCustomParam2.trim() : null,
+      param2:
+        type.id === "replace-text" || type.id === "prepend-append"
+          ? newCustomParam2.trim()
+          : null,
     };
     scheduleSave({ ...config, buttons: [...config.buttons, button] });
     newCustomType = "";
@@ -629,13 +640,13 @@
                           )}
                       />
                     {/if}
-                    {#if button.customType === "replace-text"}
+                    {#if button.customType === "replace-text" || button.customType === "prepend-append"}
                       <input
                         class="param-input"
                         type="text"
                         value={button.param2 ?? ""}
                         maxlength="60"
-                        placeholder="替换为文本"
+                        placeholder={customParamLabel(button.customType, false)}
                         onchange={(e) =>
                           updateButtonParam2(
                             index,
@@ -733,10 +744,10 @@
           bind:value={newCustomParam1}
         />
       {/if}
-      {#if newCustomType === "replace-text"}
+      {#if newCustomType === "replace-text" || newCustomType === "prepend-append"}
         <input
           type="text"
-          placeholder="替换为文本"
+          placeholder={customParamLabel(newCustomType, false)}
           maxlength="60"
           bind:value={newCustomParam2}
         />

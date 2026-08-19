@@ -480,6 +480,30 @@ fn prepend_prefix(text: &str, prefix: &str) -> String {
     out
 }
 
+/// 按行同时添加前缀与后缀：保留换行，CRLF 保持。
+fn prepend_and_append(text: &str, prefix: &str, suffix: &str) -> String {
+    let parts: Vec<&str> = text.split('\n').collect();
+    let ends_with_newline = text.ends_with('\n');
+    let mut out = String::with_capacity(text.len() + (prefix.len() + suffix.len()) * parts.len());
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        if ends_with_newline && i == parts.len() - 1 {
+            out.push_str(part);
+            continue;
+        }
+        let content = part.strip_suffix('\r').unwrap_or(part);
+        out.push_str(prefix);
+        out.push_str(content);
+        out.push_str(suffix);
+        if part.ends_with('\r') {
+            out.push('\r');
+        }
+    }
+    out
+}
+
 /// 全文替换（区分大小写、非正则）；被替换文本为空时原样返回。
 fn replace_all(text: &str, from: &str, to: &str) -> String {
     if from.is_empty() {
@@ -525,6 +549,10 @@ pub fn transform_custom(
         "prepend-prefix" => param1
             .map(|prefix| prepend_prefix(text, prefix))
             .unwrap_or_else(|| text.to_string()),
+        "prepend-append" => match (param1, param2) {
+            (Some(prefix), Some(suffix)) => prepend_and_append(text, prefix, suffix),
+            _ => text.to_string(),
+        },
         "replace-text" => match (param1, param2) {
             (Some(from), Some(to)) => replace_all(text, from, to),
             _ => text.to_string(),
@@ -769,6 +797,10 @@ mod tests {
             ">a\n>b"
         );
         assert_eq!(
+            transform_custom("a\nb", "prepend-append", Some(">"), Some("!")),
+            ">a!\n>b!"
+        );
+        assert_eq!(
             transform_custom("aab aa", "replace-text", Some("aa"), Some("bb")),
             "bbb bb"
         );
@@ -780,6 +812,10 @@ mod tests {
         assert_eq!(
             transform_custom("a\r\nb", "append-suffix", Some("!"), None),
             "a!\r\nb!"
+        );
+        assert_eq!(
+            transform_custom("a\r\nb", "prepend-append", Some(">"), Some("!")),
+            ">a!\r\n>b!"
         );
     }
 }

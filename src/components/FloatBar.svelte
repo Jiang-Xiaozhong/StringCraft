@@ -25,6 +25,7 @@
 
   let config: AppConfig = $state(DEFAULT_CONFIG);
   let activeId: string | null = $state(null);
+  let clickTimer: ReturnType<typeof setTimeout> | undefined;
   let bubble: string | null = $state(null);
   let bubbleTimer: ReturnType<typeof setTimeout> | undefined;
   let buttonTooltip: {
@@ -215,6 +216,13 @@
   async function handleClick(button: TransformButton) {
     if (activeId) return; // 执行期间忽略重复点击
     activeId = button.id;
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => {
+      if (activeId) {
+        activeId = null;
+        showBubble(tt("floatbar.timeout"));
+      }
+    }, 8000);
     try {
       const message = await executeButton(button.transform, {
         customType: button.customType ?? null,
@@ -225,6 +233,7 @@
     } catch (err) {
       showBubble(String(err));
     } finally {
+      clearTimeout(clickTimer);
       setTimeout(() => {
         activeId = null;
       }, 260);
@@ -429,6 +438,7 @@
     clearTimeout(bubbleTimer);
     clearTimeout(moveSaveTimer);
     clearTimeout(widthSaveTimer);
+    clearTimeout(clickTimer);
   });
 </script>
 

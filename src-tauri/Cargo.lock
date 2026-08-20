@@ -3491,7 +3491,7 @@ dependencies = [
 
 [[package]]
 name = "stringcraft"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "arboard",
  "dirs 6.0.0",

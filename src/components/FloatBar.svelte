@@ -13,6 +13,7 @@
     applyNoActivate,
     executeButton,
     getConfig,
+    hideFloatBar,
     saveFloatBarPosition,
     saveFloatBarWidth,
     showSettingsWindow,
@@ -43,7 +44,9 @@
   let actionsHorizontal = $state(false);
   let maxBarWidth = 4000;
   let moveSaveTimer: ReturnType<typeof setTimeout> | undefined;
+  let hideResetTimer: ReturnType<typeof setTimeout> | undefined;
   let widthSaveTimer: ReturnType<typeof setTimeout> | undefined;
+  let suppressMoveSave = false;
   let resizeState: { startX: number; startWidth: number } | null = null;
   let unlisten: (() => void) | undefined;
   let unlistenMove: (() => void) | undefined;
@@ -311,6 +314,9 @@
   async function ensurePositionInScreen() {
     try {
       const position = await win.outerPosition();
+      // Windows 隐藏态会先把悬浮条移出屏幕，此时不做越界归位，
+      // 避免把隐藏中的悬浮条拉回屏幕。
+      if (position.x < -10000 || position.y < -10000) return;
       const monitor =
         (await monitorFromPoint(position.x, position.y)) ?? (await currentMonitor());
       const size = await win.outerSize();
@@ -336,6 +342,7 @@
   }
 
   function onWindowMoved(event: { payload: { x: number; y: number } }) {
+    if (suppressMoveSave) return;
     clearTimeout(moveSaveTimer);
     moveSaveTimer = setTimeout(() => {
       void saveFloatBarPosition(
@@ -389,6 +396,22 @@
     }, 250);
   }
 
+  async function hideBar() {
+    // Windows：隐藏时由后端将窗口移出屏幕并保持 WebView2 存活，
+    // 期间产生的窗口移动事件不应写入配置中的位置。
+    suppressMoveSave = true;
+    clearTimeout(hideResetTimer);
+    try {
+      await hideFloatBar();
+    } catch {
+      suppressMoveSave = false;
+      return;
+    }
+    hideResetTimer = setTimeout(() => {
+      suppressMoveSave = false;
+    }, 1500);
+  }
+
   async function loadInitial() {
     try {
       config = await getConfig();
@@ -437,6 +460,7 @@
     clearTimeout(buttonTooltipTimer);
     clearTimeout(bubbleTimer);
     clearTimeout(moveSaveTimer);
+    clearTimeout(hideResetTimer);
     clearTimeout(widthSaveTimer);
     clearTimeout(clickTimer);
   });
@@ -475,7 +499,7 @@
           />
         </svg>
       </button>
-      <button type="button" class="hide-button" title={tt("floatbar.hide")} onclick={() => win.hide()}>
+      <button type="button" class="hide-button" title={tt("floatbar.hide")} onclick={hideBar}>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M12 15.5 6 9.5 7.4 8.1 12 12.7 16.6 8.1 18 9.5z" fill="currentColor" />
         </svg>

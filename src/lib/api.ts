@@ -45,8 +45,12 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
   return invoke<UpdateInfo>("check_for_update");
 }
 
-export async function downloadUpdate(assetUrl: string): Promise<string> {
-  return invoke<string>("download_update", { assetUrl });
+export async function openInBrowser(url: string): Promise<void> {
+  await invoke("open_in_browser", { url });
+}
+
+export async function hideFloatBar(): Promise<void> {
+  await invoke("hide_float_bar");
 }
 
 export async function installUpdate(path: string): Promise<string> {

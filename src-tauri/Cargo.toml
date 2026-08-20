@@ -27,4 +27,4 @@ tauri-plugin-dialog = "2.7.2"
 ureq = "3.4.0"
 
 [target."cfg(windows)".dependencies]
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Shell"] }

@@ -16,13 +16,53 @@ use tauri_plugin_autostart::MacosLauncher;
 pub const FLOAT_BAR_LABEL: &str = "float-bar";
 pub const SETTINGS_LABEL: &str = "settings";
 
+/// 悬浮条逻辑显隐状态（仅 Windows 使用）：
+/// 隐藏时不再调用 `hide()`（长时间隐藏会导致 WebView2 页面进程被系统回收，
+/// 再次呼出后界面仍在但点击无响应），改为把窗口移出屏幕并开启点击穿透，
+/// 保持 WebView2 存活；呼出时恢复原位。
+pub struct FloatBarState {
+    pub logical_visible: Mutex<bool>,
+    pub saved_position: Mutex<Option<tauri::PhysicalPosition<i32>>>,
+}
+
+impl Default for FloatBarState {
+    fn default() -> Self {
+        Self {
+            logical_visible: Mutex::new(true),
+            saved_position: Mutex::new(None),
+        }
+    }
+}
+
 /// 呼出悬浮条：显示并取消最小化（不主动抢焦点）。
 pub fn show_float_bar(app: &AppHandle) {
     let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) else {
         return;
     };
-    let _ = win.show();
-    let _ = win.unminimize();
+
+    #[cfg(target_os = "windows")]
+    {
+        // 恢复隐藏前的位置，关闭点击穿透，并重新确保不抢焦点
+        if let Some(state) = app.try_state::<FloatBarState>() {
+            if let Ok(position) = state.saved_position.lock() {
+                if let Some(position) = position.as_ref() {
+                    let _ = win.set_position(tauri::Position::Physical(*position));
+                }
+            }
+            if let Ok(mut visible) = state.logical_visible.lock() {
+                *visible = true;
+            }
+        }
+        let _ = win.unminimize();
+        let _ = win.set_ignore_cursor_events(false);
+        let _ = apply_no_activate(&win);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = win.show();
+        let _ = win.unminimize();
+    }
 }
 
 /// 隐藏悬浮条，托盘图标保持常驻。
@@ -30,7 +70,25 @@ pub fn hide_float_bar(app: &AppHandle) {
     let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) else {
         return;
     };
-    let _ = win.hide();
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(mut position) = app.state::<FloatBarState>().saved_position.lock() {
+            *position = win.outer_position().ok();
+        }
+        if let Ok(mut visible) = app.state::<FloatBarState>().logical_visible.lock() {
+            *visible = false;
+        }
+        // 移出屏幕并开启点击穿透，窗口保持“可见”以维持 WebView2 存活
+        let off_screen = tauri::Position::Physical(tauri::PhysicalPosition::new(-32000, -32000));
+        let _ = win.set_position(off_screen);
+        let _ = win.set_ignore_cursor_events(true);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = win.hide();
+    }
 }
 
 /// 呼出设置窗口：显示、取消最小化并聚焦，便于立即操作。
@@ -48,10 +106,74 @@ pub fn toggle_float_bar(app: &AppHandle) {
     let Some(win) = app.get_webview_window(FLOAT_BAR_LABEL) else {
         return;
     };
-    if win.is_visible().unwrap_or(false) {
-        let _ = win.hide();
-    } else {
-        show_float_bar(app);
+
+    #[cfg(target_os = "windows")]
+    {
+        // Windows 下窗口始终“可见”，用逻辑状态判断显隐
+        let _ = win;
+        let hidden = app
+            .state::<FloatBarState>()
+            .logical_visible
+            .lock()
+            .map(|visible| !*visible)
+            .unwrap_or(false);
+        if hidden {
+            show_float_bar(app);
+        } else {
+            hide_float_bar(app);
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if win.is_visible().unwrap_or(false) {
+            let _ = win.hide();
+        } else {
+            show_float_bar(app);
+        }
+    }
+}
+
+/// 用系统默认浏览器打开 URL（下载更新入口跳转 GitHub Releases 页面）。
+pub fn open_in_browser(url: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::core::PCWSTR;
+        use windows::Win32::UI::Shell::ShellExecuteW;
+        use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+        let operation: Vec<u16> = "open".encode_utf16().chain(std::iter::once(0)).collect();
+        let url_wide: Vec<u16> = url.encode_utf16().chain(std::iter::once(0)).collect();
+        let result = unsafe {
+            ShellExecuteW(
+                None,
+                PCWSTR(operation.as_ptr()),
+                PCWSTR(url_wide.as_ptr()),
+                PCWSTR(std::ptr::null()),
+                PCWSTR(std::ptr::null()),
+                SW_SHOWNORMAL,
+            )
+        };
+        // ShellExecuteW 返回值大于 32 表示成功
+        if result.0 as isize <= 32 {
+            return Err(format!("打开浏览器失败：错误码 {}", result.0 as isize));
+        }
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败：{e}"))?;
+        Ok(())
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        let _ = url;
+        Err("当前平台不支持打开浏览器".to_string())
     }
 }
 
@@ -63,6 +185,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(ConfigState(Mutex::new(config)))
         .manage(StartupNotice(Mutex::new(None)))
+        .manage(FloatBarState::default())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 第二次启动（如双击快捷方式）只呼出悬浮条，不创建新实例
             show_float_bar(app);
@@ -130,6 +253,8 @@ pub fn run() {
             commands::macos_accessibility_trusted,
             commands::open_macos_accessibility_settings,
             commands::open_settings,
+            commands::hide_float_bar,
+            commands::open_in_browser,
             commands::execute_button
         ])
         .run(tauri::generate_context!())

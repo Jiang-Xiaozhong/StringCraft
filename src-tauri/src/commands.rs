@@ -84,6 +84,19 @@ pub fn open_settings(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 隐藏悬浮条（Windows 下由后端移出屏幕保持 WebView2 存活）。
+#[tauri::command]
+pub fn hide_float_bar(app: AppHandle) -> Result<(), String> {
+    crate::hide_float_bar(&app);
+    Ok(())
+}
+
+/// 用系统默认浏览器打开 URL（下载更新跳转 GitHub Releases 发布页面）。
+#[tauri::command]
+pub fn open_in_browser(url: String) -> Result<(), String> {
+    crate::open_in_browser(&url)
+}
+
 /// 悬浮条加载完成后调用：设置不抢焦点（位置记忆由前端负责）。
 #[tauri::command]
 pub fn apply_no_activate(app: AppHandle) -> Result<(), String> {

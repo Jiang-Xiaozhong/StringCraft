@@ -6,13 +6,13 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import {
     checkForUpdate,
-    downloadUpdate,
     exportConfigTo,
     getConfig,
     importConfigFrom,
     installUpdate,
     isMacOS,
     macOSAccessibilityTrusted,
+    openInBrowser,
     openMacOSAccessibilitySettings,
     saveConfig,
     type UpdateInfo,
@@ -39,6 +39,8 @@
   let checkingUpdate = $state(false);
   let updateInfo: UpdateInfo | null = $state(null);
   let updateReadyPath: string | null = $state(null);
+  let latestHint: string | null = $state(null);
+  let latestHintTimer: ReturnType<typeof setTimeout> | undefined;
   let platform = $state("windows");
   let macPermission = $state(false);
   let systemDark = $state(false);
@@ -107,6 +109,7 @@
     unlistenUpdateFound?.();
     unlistenUpdateReady?.();
     clearTimeout(saveTimer);
+    clearTimeout(latestHintTimer);
   });
 
   function scheduleSave(next: AppConfig) {
@@ -387,7 +390,7 @@
       name: newCustomName.trim() || tt(type.nameKey),
       transform: "custom",
       description: newCustomDescription.trim(),
-      visible: false,
+      visible: true,
       customType: newCustomType,
       param1: type.id === "remove-duplicate-lines" ? null : newCustomParam1.trim(),
       param2:
@@ -471,6 +474,11 @@
       const info = await checkForUpdate();
       updateInfo = info;
       if (!info.latest) {
+        latestHint = tt("settings.update.latestHint");
+        clearTimeout(latestHintTimer);
+        latestHintTimer = setTimeout(() => {
+          latestHint = null;
+        }, 4000);
         status = tt("settings.update.latest", { version: info.version ?? "0.1.0" });
       }
     } catch (e) {
@@ -480,11 +488,10 @@
     }
   }
 
-  async function downloadUpdateNow() {
-    if (!updateInfo?.assetUrl) return;
+  async function openDownloadPage() {
+    const url = updateInfo?.url ?? "https://github.com/Jiang-Xiaozhong/StringCraft/releases";
     try {
-      updateReadyPath = await downloadUpdate(updateInfo.assetUrl);
-      status = tt("settings.update.ready");
+      await openInBrowser(url);
     } catch (e) {
       status = translateRustMessage(config.language, String(e));
     }
@@ -972,6 +979,9 @@
     <h2>{tt("settings.section.update")}</h2>
     <div class="field-row">
       <label for="check-update">{tt("settings.update.check")}</label>
+      {#if latestHint}
+        <span class="update-latest-hint">{latestHint}</span>
+      {/if}
       <button
         id="check-update"
         type="button"
@@ -1007,7 +1017,7 @@
         {#if updateInfo.notes}
           <pre>{updateInfo.notes}</pre>
         {/if}
-        <button type="button" class="ghost-button" onclick={downloadUpdateNow}>
+        <button type="button" class="ghost-button" onclick={openDownloadPage}>
           {tt("settings.update.download")}
         </button>
       </div>
@@ -1566,6 +1576,12 @@
     font-size: 12px;
     white-space: pre-wrap;
     color: var(--text-muted);
+  }
+
+  .update-latest-hint {
+    font-size: 12px;
+    color: var(--success, #2f9e44);
+    white-space: nowrap;
   }
 
   .donation-images {

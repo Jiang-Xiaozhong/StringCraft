@@ -78,7 +78,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   debugLog: false,
   language: "zh-CN",
   autoCheckUpdate: true,
-  autoUpdate: false,
   showDonation: true,
   buttons: DEFAULT_BUTTONS,
 };

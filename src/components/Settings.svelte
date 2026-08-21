@@ -9,7 +9,6 @@
     exportConfigTo,
     getConfig,
     importConfigFrom,
-    installUpdate,
     isMacOS,
     macOSAccessibilityTrusted,
     openInBrowser,
@@ -38,7 +37,6 @@
   let newCustomDescription = $state("");
   let checkingUpdate = $state(false);
   let updateInfo: UpdateInfo | null = $state(null);
-  let updateReadyPath: string | null = $state(null);
   let latestHint: string | null = $state(null);
   let latestHintTimer: ReturnType<typeof setTimeout> | undefined;
   let platform = $state("windows");
@@ -52,7 +50,6 @@
   let dragTargets: number[] = [];
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
   let unlistenUpdateFound: (() => void) | undefined;
-  let unlistenUpdateReady: (() => void) | undefined;
 
   const CUSTOM_TYPES = [
     { id: "append-suffix", nameKey: "custom.appendSuffix", paramKey: "custom.suffixPlaceholder" },
@@ -93,10 +90,6 @@
     unlistenUpdateFound = await listen("update-found", (event) => {
       updateInfo = event.payload as UpdateInfo;
     });
-    unlistenUpdateReady = await listen("update-ready", (event) => {
-      updateReadyPath = event.payload as string;
-      status = tt("settings.update.ready");
-    });
     if (await isMacOS()) {
       platform = "macos";
       macPermission = await macOSAccessibilityTrusted();
@@ -107,7 +100,6 @@
     media.removeEventListener("change", updateSystemDark);
     window.removeEventListener("keydown", onHotkeyKeydown);
     unlistenUpdateFound?.();
-    unlistenUpdateReady?.();
     clearTimeout(saveTimer);
     clearTimeout(latestHintTimer);
   });
@@ -495,16 +487,6 @@
     } catch (e) {
       status = translateRustMessage(config.language, String(e));
     }
-  }
-
-  async function confirmInstallUpdate() {
-    if (!updateReadyPath) return;
-    try {
-      status = await installUpdate(updateReadyPath);
-    } catch (e) {
-      status = translateRustMessage(config.language, String(e));
-    }
-    updateReadyPath = null;
   }
 
   async function refreshMacPermission() {
@@ -1002,15 +984,6 @@
           updateAppearance({ autoCheckUpdate: e.currentTarget.checked })}
       />
     </div>
-    <div class="toggle-row">
-      <label for="auto-update">{tt("settings.update.autoUpdate")}</label>
-      <input
-        id="auto-update"
-        type="checkbox"
-        checked={config.autoUpdate}
-        onchange={(e) => updateAppearance({ autoUpdate: e.currentTarget.checked })}
-      />
-    </div>
     {#if updateInfo?.latest}
       <div class="update-panel">
         <p>{tt("settings.update.found", { version: updateInfo.version ?? "" })}</p>
@@ -1088,25 +1061,6 @@
     </div>
   {/if}
 
-  {#if updateReadyPath}
-    <div class="modal-backdrop" role="presentation">
-      <div class="modal" role="dialog" aria-modal="true" tabindex="0">
-        <h3>{tt("settings.update.ready")}</h3>
-        <div class="modal-actions">
-          <button
-            type="button"
-            class="ghost-button"
-            onclick={() => (updateReadyPath = null)}
-          >
-            {tt("settings.buttons.cancel")}
-          </button>
-          <button type="button" class="ghost-button" onclick={confirmInstallUpdate}>
-            {tt("settings.update.install")}
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
 </main>
 
 <style>

@@ -194,18 +194,6 @@ pub fn check_for_update() -> Result<update::UpdateInfo, String> {
     update::check_for_update()
 }
 
-/// 下载更新安装包，返回本地路径。
-#[tauri::command]
-pub fn download_update(asset_url: String) -> Result<String, String> {
-    update::download_update(&asset_url)
-}
-
-/// 启动已下载的安装程序。
-#[tauri::command]
-pub fn install_update(path: String) -> Result<String, String> {
-    update::launch_installer(&path)
-}
-
 /// 当前是否为 macOS 平台。
 #[tauri::command]
 pub fn is_macos() -> bool {

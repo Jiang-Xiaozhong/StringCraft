@@ -32,7 +32,6 @@ export interface AppConfig {
   debugLog: boolean;
   language: "zh-CN" | "en-US";
   autoCheckUpdate: boolean;
-  autoUpdate: boolean;
   showDonation: boolean;
   buttons: TransformButton[];
 }

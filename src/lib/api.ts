@@ -38,7 +38,6 @@ export interface UpdateInfo {
   version?: string | null;
   notes?: string | null;
   url?: string | null;
-  assetUrl?: string | null;
 }
 
 export async function checkForUpdate(): Promise<UpdateInfo> {
@@ -51,10 +50,6 @@ export async function openInBrowser(url: string): Promise<void> {
 
 export async function hideFloatBar(): Promise<void> {
   await invoke("hide_float_bar");
-}
-
-export async function installUpdate(path: string): Promise<string> {
-  return invoke<string>("install_update", { path });
 }
 
 export async function isMacOS(): Promise<boolean> {

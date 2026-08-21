@@ -247,8 +247,6 @@ pub fn run() {
             commands::export_config_to,
             commands::import_config_from,
             commands::check_for_update,
-            commands::download_update,
-            commands::install_update,
             commands::is_macos,
             commands::macos_accessibility_trusted,
             commands::open_macos_accessibility_settings,

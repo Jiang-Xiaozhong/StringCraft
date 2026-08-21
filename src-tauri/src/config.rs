@@ -39,7 +39,6 @@ pub struct AppConfig {
     pub debug_log: bool,
     pub language: String,
     pub auto_check_update: bool,
-    pub auto_update: bool,
     pub show_donation: bool,
     pub buttons: Vec<TransformButton>,
 }
@@ -122,7 +121,6 @@ pub fn default_config() -> AppConfig {
         debug_log: false,
         language: "zh-CN".to_string(),
         auto_check_update: true,
-        auto_update: false,
         show_donation: true,
         buttons: default_buttons(),
     }

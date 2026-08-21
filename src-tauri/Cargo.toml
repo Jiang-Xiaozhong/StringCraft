@@ -1,6 +1,6 @@
 [package]
 name = "stringcraft"
-version = "0.1.6"
+version = "0.1.7"
 description = "StringCraft 字符串工坊"
 authors = ["Jiang Xiaozhong"]
 edition = "2021"
